@@ -1,0 +1,176 @@
+/* ============================================
+   DRIVER ROUTE MAP - ESTILOS MODULARES
+   ============================================ */
+
+.driver-route-map-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.route-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.route-map-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #e5e5e5;
+}
+
+.route-stats {
+  display: flex;
+  gap: 8px;
+}
+
+.stat-badge {
+  background: #2a2a2a;
+  color: #9ca3af;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.refresh-indicator {
+  background: #3b82f6;
+  color: #fff;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.route-map-wrapper {
+  width: 100%;
+  height: 500px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+/* Marcadores personalizados */
+.custom-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.custom-marker:hover {
+  transform: scale(1.1);
+}
+
+.marker-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.marker-label {
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Leyenda */
+.route-legend {
+  display: flex;
+  gap: 20px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #2a2a2a;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+.legend-icon {
+  font-size: 18px;
+}
+
+.legend-line {
+  width: 30px;
+  height: 3px;
+  background: #3b82f6;
+  border-radius: 2px;
+}
+
+/* Estados vacíos y errores */
+.driver-route-map-empty,
+.driver-route-map-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  background: #2a2a2a;
+  border-radius: 8px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 40px;
+}
+
+.driver-route-map-empty p,
+.driver-route-map-error p {
+  margin: 0 0 8px 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.driver-route-map-empty small {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.driver-route-map-error p {
+  color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .driver-route-map-container {
+    padding: 16px;
+  }
+
+  .route-map-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .route-map-wrapper {
+    height: 400px;
+  }
+
+  .route-legend {
+    gap: 12px;
+  }
+
+  .legend-item {
+    font-size: 0.8125rem;
+  }
+}

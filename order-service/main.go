@@ -1,0 +1,74 @@
+package main
+
+import (
+	"database/sql"
+	"log"
+	"os"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
+	"github.com/logitrack/order-service/handlers"
+	"github.com/logitrack/order-service/logging"
+	"github.com/logitrack/order-service/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+var db *sql.DB
+
+func initDB() {
+	var err error
+	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	handlers.SetDB(db)
+	seedMotos()
+}
+
+func seedMotos() {
+	_, err := db.Exec("INSERT INTO motos (license_plate, status) VALUES " +
+		"('MOTO-001', 'available'), " +
+		"('MOTO-002', 'available'), " +
+		"('MOTO-003', 'available') " +
+		"ON CONFLICT (license_plate) DO NOTHING")
+	if err != nil {
+		log.Println("failed to seed motos:", err)
+	}
+}
+
+func main() {
+	initDB()
+
+	// Inicializar logger estructurado
+	logging.InitLogger("order-service")
+	logger := logging.Logger
+
+	r := gin.Default()
+	// No CORS middleware - handled by API Gateway
+
+	// Middlewares globales: request-id + métricas
+	r.Use(middleware.RequestIDMiddleware())
+	r.Use(middleware.MetricsMiddleware())
+
+	r.POST("/orders", handlers.CreateOrder)
+	r.GET("/orders", handlers.GetOrders)
+	r.GET("/orders/:id", handlers.GetOrderByID)
+	r.GET("/orders/:id/eta", handlers.GetOrderETA)
+	r.GET("/motos", handlers.GetMotos)
+	r.GET("/motos/:id", handlers.GetMotoByID)
+	r.POST("/motos", handlers.CreateMoto)
+	r.PUT("/motos/:id", handlers.UpdateMoto)
+	r.PUT("/motos/:id/status", handlers.UpdateMotoStatus)
+	r.DELETE("/motos/:id", handlers.DeleteMoto)
+	r.PUT("/orders/:id/status", handlers.UpdateOrderStatus)
+	r.PUT("/orders/:id/assign", handlers.AssignOrderToMoto)
+	r.GET("/optimization/assignments", handlers.OptimizeAssignments)
+	r.POST("/optimization/apply", handlers.ApplyOptimizedAssignments)
+	r.GET("/kpis/motos", handlers.GetMotosKPIs)
+
+	// Endpoint de métricas Prometheus
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	logger.Info().Msg("🚀 Order service iniciado en puerto 8082")
+	r.Run(":8082")
+}

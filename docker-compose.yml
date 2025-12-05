@@ -1,0 +1,75 @@
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8085:8080"
+    environment:
+      - REDIS_URL=redis://:logitrack_redis_password@redis:6379/0
+    depends_on:
+      - redis
+
+  user-service:
+    build: ./user-service
+    ports:
+      - "8086:8081"
+    environment:
+      - DATABASE_URL=postgres://user:password@postgres:5432/logitrack?sslmode=disable
+      - JWT_SECRET=mi_secreto_jwt_logitrack
+      - REDIS_URL=redis://:logitrack_redis_password@redis:6379/0
+    depends_on:
+      - redis
+      - postgres
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "8087:8082"
+    environment:
+      - DATABASE_URL=postgres://user:password@postgres:5432/logitrack?sslmode=disable
+
+  geolocation-service:
+    build: ./geolocation-service
+    ports:
+      - "8088:8083"
+    environment:
+      - DATABASE_URL=postgres://user:password@postgres:5432/logitrack?sslmode=disable
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "5001:5000"
+
+  web-app:
+    build: ./web-app
+    ports:
+      - "3001:80"
+
+  client-view:
+    build: ./client-view
+    ports:
+      - "3002:80"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: logitrack
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass logitrack_redis_password
+
+volumes:
+  postgres_data:
+  redis_data:

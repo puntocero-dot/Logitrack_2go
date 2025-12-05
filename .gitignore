@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+dist/
+build/
+*.exe
+*.log
+.DS_Store
+
+# Go
+vendor/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Variables de entorno (¡CRÍTICO NO SUBIR!)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Editor
+.vscode/
+.idea/
+
+# Sistema
+Thumbs.db

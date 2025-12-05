@@ -1,0 +1,413 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #001940;
+  color: #ffffff;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 28px;
+  border-radius: 20px;
+  background: #0f1d3b;
+  box-shadow: 0 24px 60px rgba(0, 25, 64, 0.9);
+  border: 1px solid rgba(226, 230, 237, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.auth-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.auth-subtitle {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: #a3b8ff;
+}
+
+.auth-error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #fca5a5;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.label {
+  font-size: 13px;
+  color: #a3b8ff;
+}
+
+.input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(163, 184, 255, 0.4);
+  background: #112250;
+  color: #ffffff;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #004cff;
+  box-shadow: 0 0 0 1px rgba(0, 76, 255, 0.8);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+}
+
+.btn + .btn {
+  margin-left: 8px;
+}
+
+.btn-primary {
+  background: #ff4b3e;
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(255, 75, 62, 0.45);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  background: #ff6b57;
+  box-shadow: 0 16px 40px rgba(255, 107, 87, 0.6);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+  background: #e34435;
+  box-shadow: 0 8px 20px rgba(255, 75, 62, 0.4);
+}
+
+.btn-secondary {
+  padding: 8px 14px;
+  background: transparent;
+  color: #ff4b3e;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 75, 62, 0.7);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 75, 62, 0.1);
+}
+
+.dashboard-shell {
+  min-height: 100vh;
+  padding: 24px 32px 40px;
+}
+
+.dashboard-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  background: #0f1d3b;
+  border-radius: 22px;
+  padding: 20px 24px 28px;
+  border: 1px solid rgba(226, 230, 237, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 25, 64, 0.9);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.dashboard-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.form-card {
+  background: #112250;
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(226, 230, 237, 0.16);
+}
+
+.form-card h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.form-input,
+.form-select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  background: #0b1633;
+  color: #e5e5e5;
+  font-size: 14px;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
+
+.alert {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.alert--success {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+.alert--error {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+}
+
+.metrics-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.metric-card {
+  flex: 1;
+  min-width: 120px;
+  background: #112250;
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(226, 230, 237, 0.16);
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #a3b8ff;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.table-wrapper {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  margin-bottom: 20px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #0f1d3b;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.data-table thead {
+  background: #112250;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: #112250;
+}
+
+.data-table tbody tr:hover {
+  background: #1b2b52;
+}
+
+.badge-status {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  text-transform: lowercase;
+}
+
+.badge-pending {
+  background: rgba(255, 107, 87, 0.18);
+  color: #ff6b57;
+}
+
+.badge-in_route {
+  background: rgba(0, 76, 255, 0.18);
+  color: #a3b8ff;
+}
+
+.badge-delivered {
+  background: rgba(0, 212, 195, 0.18);
+  color: #00d4c3;
+}
+
+.badge-assigned {
+  background: rgba(0, 76, 255, 0.12);
+  color: #a3b8ff;
+}
+
+.badge-cancelled {
+  background: rgba(255, 75, 62, 0.18);
+  color: #ff4b3e;
+}
+
+.badge-moto-available {
+  background: rgba(0, 212, 195, 0.18);
+  color: #00d4c3;
+}
+
+.badge-moto-in_route {
+  background: rgba(0, 76, 255, 0.18);
+  color: #a3b8ff;
+}
+
+.badge-moto-inactive {
+  background: rgba(255, 107, 87, 0.18);
+  color: #ff6b57;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.badge-role {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.badge-admin {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.badge-supervisor {
+  background: #f59e0b;
+  color: #78350f;
+}
+
+.badge-driver {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.badge-operator {
+  background: #6b7280;
+  color: #ffffff;
+}
+
+.select-status {
+  padding: 4px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(163, 184, 255, 0.5);
+  background: #001940;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.map-card {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 230, 237, 0.16);
+}
+
+.kpi-motos-section {
+  margin-top: 2rem;
+}
+
+.kpi-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #e5e5e5;
+}
+
+.badge-count {
+  background-color: #3b82f6;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.btn-success {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .dashboard-shell {
+    padding: 16px;
+  }
+
+  .dashboard-inner {
+    padding: 16px;
+  }
+}

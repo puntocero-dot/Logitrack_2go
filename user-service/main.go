@@ -35,15 +35,20 @@ func initRedis() {
 }
 
 func seedUsers() {
-	// Hash passwords before inserting
-	adminHash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
-	superCentralHash, _ := bcrypt.GenerateFromPassword([]byte("super123"), bcrypt.DefaultCost)
-	superEsteHash, _ := bcrypt.GenerateFromPassword([]byte("super123"), bcrypt.DefaultCost)
-	superOesteHash, _ := bcrypt.GenerateFromPassword([]byte("super123"), bcrypt.DefaultCost)
-	driver1Hash, _ := bcrypt.GenerateFromPassword([]byte("driver123"), bcrypt.DefaultCost)
-	driver2Hash, _ := bcrypt.GenerateFromPassword([]byte("driver123"), bcrypt.DefaultCost)
-	driver3Hash, _ := bcrypt.GenerateFromPassword([]byte("driver123"), bcrypt.DefaultCost)
-	clienteHash, _ := bcrypt.GenerateFromPassword([]byte("cliente123"), bcrypt.DefaultCost)
+	// Hash passwords before inserting. Use enviroment variable or default for dev only.
+	defaultPass := os.Getenv("SEED_USER_PASSWORD")
+	if defaultPass == "" {
+		defaultPass = "dev_password_do_not_use_in_prod"
+	}
+
+	adminHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
+	superCentralHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
+	superEsteHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
+	superOesteHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
+	driver1Hash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
+	driver2Hash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
+	driver3Hash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
+	clienteHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
 
 	_, err := db.Exec(`
 		INSERT INTO users (name, email, password_hash, role, branch) VALUES

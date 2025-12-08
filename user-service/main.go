@@ -67,7 +67,10 @@ func seedUsers() {
 		('Driver Este', 'driver2@logitrack.com', $6, 'driver', 'este'),
 		('Driver Oeste', 'driver3@logitrack.com', $7, 'driver', 'oeste'),
 		('Cliente Demo', 'cliente@demo.com', $8, 'client', 'central')
-		ON CONFLICT (email) DO NOTHING
+		ON CONFLICT (email) DO UPDATE SET
+			password_hash = EXCLUDED.password_hash,
+			role = EXCLUDED.role,
+			branch = EXCLUDED.branch
 	`, adminHash, superCentralHash, superEsteHash, superOesteHash, driver1Hash, driver2Hash, driver3Hash, clienteHash)
 	if err != nil {
 		log.Println("failed to seed users:", err)

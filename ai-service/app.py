@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import math
+import os
 
 app = Flask(__name__)
 
@@ -84,4 +85,6 @@ def optimize_assignments():
 
 
 if __name__ == '__main__':
-	app.run(host='0.0.0.0', port=5000)
+	# Usa PORT de Railway si existe, sino 5000 por defecto
+	port = int(os.getenv("PORT", "5000"))
+	app.run(host='0.0.0.0', port=port)

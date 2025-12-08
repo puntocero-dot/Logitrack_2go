@@ -76,12 +76,12 @@ REDIS_URL=${{Redis.REDIS_URL}}
 USER_SERVICE_URL=http://user-service.railway.internal:8080
 ORDER_SERVICE_URL=http://order-service.railway.internal:8080
 GEO_SERVICE_URL=http://geolocation-service.railway.internal:8080
-AI_SERVICE_URL=http://ai-service.railway.internal:8080
+AI_SERVICE_URL=http://ai-service.railway.internal:5000
 ```
 
 **Networking:** ✅ Generate Domain → **📝 GUARDA ESTA URL**
 
----
+    http://api-gateway-production-ad21.up.railway.app
 
 #### 2️⃣ user-service (privado)
 **Settings:**
@@ -151,13 +151,12 @@ PORT=8080
 
 **Variables:**
 ```
-REACT_APP_API_URL=PEGA_AQUI_LA_URL_DEL_API_GATEWAY
+REACT_APP_API_URL=api-gateway-production-ad21.up.railway.app
 ```
 ⚠️ **IMPORTANTE:** Reemplaza con la URL que guardaste del api-gateway (paso 1)
 
 **Networking:** ✅ Generate Domain → **📝 ESTA ES TU APP PRINCIPAL**
-
----
+web-app-production-05a3.up.railway.app
 
 #### 7️⃣ client-view (PÚBLICO ⭐)
 **Settings:**
@@ -166,13 +165,14 @@ REACT_APP_API_URL=PEGA_AQUI_LA_URL_DEL_API_GATEWAY
 
 **Variables:**
 ```
-REACT_APP_API_URL=PEGA_AQUI_LA_URL_DEL_API_GATEWAY
+REACT_APP_API_URL=api-gateway-production-ad21.up.railway.app
 ```
 ⚠️ Usa la misma URL del api-gateway
 
 **Networking:** ✅ Generate Domain
 
----
+client-view-production.up.railway.app
+
 
 ## ✅ VERIFICACIÓN FINAL
 
@@ -224,16 +224,16 @@ Si entras al dashboard → **🎉 ¡FUNCIONÓ!**
 
 Marca cada servicio cuando esté ✅:
 
-- [ ] Postgres creado
-- [ ] Redis creado
+- [ ✅] Postgres creado
+- [✅ ] Redis creado
 - [ ] Tablas inicializadas (init.sql)
-- [ ] api-gateway deployado
-- [ ] user-service deployado
-- [ ] order-service deployado
-- [ ] geolocation-service deployado
-- [ ] ai-service deployado
-- [ ] web-app deployado
-- [ ] client-view deployado
+- [ ✅] api-gateway deployado
+- [✅ ] user-service deployado
+- [✅ ] order-service deployado
+- [✅ ] geolocation-service deployado
+- [✅ ] ai-service deployado
+- [✅ ] web-app deployado
+- [✅ ] client-view deployado
 - [ ] Login funciona
 - [ ] Dashboard carga datos
 

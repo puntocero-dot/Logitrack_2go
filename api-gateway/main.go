@@ -47,9 +47,9 @@ func main() {
 			"http://localhost:3002":    true, // client-view desarrollo
 			"http://10.23.150.40:3001": true, // web-app LAN
 			"http://10.23.150.40:3002": true, // client-view LAN
-			// En producción agregar dominios reales:
-			// "https://app.logitrack.com": true,
-			// "https://logitrack.com": true,
+			// Railway production
+			"https://web-app-production-05a3.up.railway.app":     true,
+			"https://client-view-production-f0c1.up.railway.app": true,
 		}
 
 		if allowedOrigins[origin] {

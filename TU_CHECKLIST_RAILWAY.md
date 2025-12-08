@@ -38,14 +38,11 @@ Ve a: https://railway.app/project/4e1f428d-6b1b-45e5-b18d-cda6f33b2008
 5. ✅ Listo
 
 ### 2.3 Inicializar Tablas
-1. Click en el servicio **"Postgres"**
-2. Click en pestaña **"Data"**
-3. Click en **"Query"**
-4. Abre el archivo `init.sql` de tu proyecto
-5. Copia TODO el contenido (Ctrl+A, Ctrl+C)
-6. Pégalo en Railway (Ctrl+V)
-7. Click **"Run Query"**
-8. ✅ Listo cuando veas "Query executed successfully"
+**✨ AUTO-INICIALIZACIÓN:** Las tablas se crean automáticamente cuando `user-service` arranque.
+
+**No necesitas hacer nada aquí.** El código ya tiene un script que crea todas las tablas si no existen.
+
+✅ Puedes saltar este paso
 
 ---
 

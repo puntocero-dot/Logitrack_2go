@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/logitrack/user-service/database"
 	"github.com/logitrack/user-service/handlers"
 	"github.com/logitrack/user-service/logging"
 	"github.com/logitrack/user-service/middleware"
@@ -23,6 +24,12 @@ func initDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Inicializar schema (crear tablas si no existen)
+	if err := database.InitSchema(db); err != nil {
+		log.Fatalf("❌ Error inicializando schema: %v", err)
+	}
+
 	handlers.SetDB(db)
 	seedUsers()
 }

@@ -43,8 +43,8 @@ func main() {
 
 		// Lista de orígenes permitidos
 		allowedOrigins := map[string]bool{
-			"http://localhost:3001": true, // web-app desarrollo
-			"http://localhost:3002": true, // client-view desarrollo
+			"http://localhost:3001":    true, // web-app desarrollo
+			"http://localhost:3002":    true, // client-view desarrollo
 			"http://10.23.150.40:3001": true, // web-app LAN
 			"http://10.23.150.40:3002": true, // client-view LAN
 			// En producción agregar dominios reales:

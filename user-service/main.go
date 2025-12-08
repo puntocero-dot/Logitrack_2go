@@ -58,20 +58,16 @@ func seedUsers() {
 	clienteHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
 
 	_, err := db.Exec(`
-		INSERT INTO users (name, email, password_hash, role, branch) VALUES
-		('Admin User', 'admin@logitrack.com', $1, 'admin', 'central'),
-		('Supervisor Central', 'supervisor.central@logitrack.com', $2, 'supervisor', 'central'),
-		('Supervisor Este', 'supervisor.este@logitrack.com', $3, 'supervisor', 'este'),
-		('Supervisor Oeste', 'supervisor.oeste@logitrack.com', $4, 'supervisor', 'oeste'),
-		('Driver Central', 'driver1@logitrack.com', $5, 'driver', 'central'),
-		('Driver Este', 'driver2@logitrack.com', $6, 'driver', 'este'),
-		('Driver Oeste', 'driver3@logitrack.com', $7, 'driver', 'oeste'),
-		('Cliente Demo', 'cliente@demo.com', $8, 'client', 'central')
+		INSERT INTO users (email, password_hash, role) VALUES
+		('admin@logitrack.com', $1, 'admin'),
+		('supervisor@logitrack.com', $2, 'supervisor'),
+		('operator@logitrack.com', $3, 'operator'),
+		('driver@logitrack.com', $4, 'driver'),
+		('client@logitrack.com', $5, 'client')
 		ON CONFLICT (email) DO UPDATE SET
 			password_hash = EXCLUDED.password_hash,
-			role = EXCLUDED.role,
-			branch = EXCLUDED.branch
-	`, adminHash, superCentralHash, superEsteHash, superOesteHash, driver1Hash, driver2Hash, driver3Hash, clienteHash)
+			role = EXCLUDED.role
+	`, adminHash, adminHash, adminHash, adminHash, adminHash)
 	if err != nil {
 		log.Println("failed to seed users:", err)
 	} else {
@@ -110,6 +106,6 @@ func main() {
 	// Endpoint de métricas Prometheus
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	logger.Info().Msg("🚀 User service iniciado en puerto 8081")
-	r.Run(":8081")
+	logger.Info().Msg("🚀 User service iniciado en puerto 8080")
+	r.Run(":8080")
 }

@@ -69,6 +69,6 @@ func main() {
 	// Endpoint de métricas Prometheus
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	logger.Info().Msg("🚀 Order service iniciado en puerto 8082")
-	r.Run(":8082")
+	logger.Info().Msg("🚀 Order service iniciado en puerto 8080")
+	r.Run(":8080")
 }

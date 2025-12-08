@@ -67,6 +67,6 @@ func main() {
 	// Endpoint de métricas Prometheus
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	logger.Info().Msg("Geolocation service running on port 8083")
-	r.Run(":8083")
+	logger.Info().Msg("Geolocation service running on port 8080")
+	r.Run(":8080")
 }

@@ -48,26 +48,19 @@ func seedUsers() {
 		defaultPass = "dev_password_do_not_use_in_prod"
 	}
 
-	adminHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
-	superCentralHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
-	superEsteHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
-	superOesteHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
-	driver1Hash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
-	driver2Hash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
-	driver3Hash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
-	clienteHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
+	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
 
 	_, err := db.Exec(`
 		INSERT INTO users (email, password_hash, role) VALUES
 		('admin@logitrack.com', $1, 'admin'),
-		('supervisor@logitrack.com', $2, 'supervisor'),
-		('operator@logitrack.com', $3, 'operator'),
-		('driver@logitrack.com', $4, 'driver'),
-		('client@logitrack.com', $5, 'client')
+		('supervisor@logitrack.com', $1, 'supervisor'),
+		('operator@logitrack.com', $1, 'operator'),
+		('driver@logitrack.com', $1, 'driver'),
+		('client@logitrack.com', $1, 'client')
 		ON CONFLICT (email) DO UPDATE SET
 			password_hash = EXCLUDED.password_hash,
 			role = EXCLUDED.role
-	`, adminHash, adminHash, adminHash, adminHash, adminHash)
+	`, passwordHash)
 	if err != nil {
 		log.Println("failed to seed users:", err)
 	} else {

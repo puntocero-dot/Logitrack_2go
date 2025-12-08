@@ -11,11 +11,9 @@ import (
 
 type User struct {
 	ID       int    `json:"id"`
-	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password,omitempty"`
 	Role     string `json:"role"`
-	Branch   string `json:"branch"`
 }
 
 var db *sql.DB
@@ -26,7 +24,7 @@ func SetDB(database *sql.DB) {
 
 // GetUsers returns all users (admin only)
 func GetUsers(c *gin.Context) {
-	rows, err := db.Query("SELECT id, name, email, role, branch FROM users ORDER BY id")
+	rows, err := db.Query("SELECT id, email, role FROM users ORDER BY id")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -36,7 +34,7 @@ func GetUsers(c *gin.Context) {
 	var users []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Branch); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Role); err != nil {
 			continue
 		}
 		users = append(users, u)
@@ -53,8 +51,8 @@ func GetUser(c *gin.Context) {
 	}
 
 	var u User
-	err = db.QueryRow("SELECT id, name, email, role, branch FROM users WHERE id = $1", id).
-		Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Branch)
+	err = db.QueryRow("SELECT id, email, role FROM users WHERE id = $1", id).
+		Scan(&u.ID, &u.Email, &u.Role)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -80,8 +78,8 @@ func CreateUser(c *gin.Context) {
 	}
 
 	err = db.QueryRow(
-		"INSERT INTO users (name, email, password_hash, role, branch) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-		u.Name, u.Email, string(hashedPassword), u.Role, u.Branch,
+		"INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id",
+		u.Email, string(hashedPassword), u.Role,
 	).Scan(&u.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -106,9 +104,9 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	// Build dynamic query
-	query := "UPDATE users SET name = $1, email = $2, role = $3, branch = $4"
-	args := []interface{}{u.Name, u.Email, u.Role, u.Branch}
-	argIdx := 5
+	query := "UPDATE users SET email = $1, role = $2"
+	args := []interface{}{u.Email, u.Role}
+	argIdx := 3
 
 	if u.Password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)

@@ -34,7 +34,6 @@ type RefreshTokenRequest struct {
 type Claims struct {
 	UserID int    `json:"user_id"`
 	Role   string `json:"role"`
-	Branch string `json:"branch"`
 	jwt.RegisteredClaims
 }
 
@@ -51,10 +50,10 @@ func Login(c *gin.Context) {
 	var passwordHash string
 
 	err := db.QueryRow(`
-		SELECT id, name, email, password_hash, role, COALESCE(branch, 'central') as branch 
+		SELECT id, email, password_hash, role
 		FROM users 
 		WHERE email = $1
-	`, req.Email).Scan(&user.ID, &user.Name, &user.Email, &passwordHash, &user.Role, &user.Branch)
+	`, req.Email).Scan(&user.ID, &user.Email, &passwordHash, &user.Role)
 
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciales inválidas"})
@@ -76,7 +75,6 @@ func Login(c *gin.Context) {
 	accessClaims := &Claims{
 		UserID: user.ID,
 		Role:   user.Role,
-		Branch: user.Branch,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(accessTokenExpiry),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -127,10 +125,10 @@ func RefreshToken(c *gin.Context) {
 	// Obtener datos del usuario
 	var user User
 	err = db.QueryRow(`
-		SELECT id, name, email, role, COALESCE(branch, 'central') as branch 
+		SELECT id, email, role
 		FROM users 
 		WHERE id = $1
-	`, userID).Scan(&user.ID, &user.Name, &user.Email, &user.Role, &user.Branch)
+	`, userID).Scan(&user.ID, &user.Email, &user.Role)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener usuario"})
@@ -148,7 +146,6 @@ func RefreshToken(c *gin.Context) {
 	accessClaims := &Claims{
 		UserID: user.ID,
 		Role:   user.Role,
-		Branch: user.Branch,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(accessTokenExpiry),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

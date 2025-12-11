@@ -161,7 +161,7 @@ function AppRoutes() {
       <Route
         path="/analytics"
         element={
-          <RoleRoute allowedRoles={['admin', 'manager', 'analyst']}>
+          <RoleRoute allowedRoles={['admin', 'manager', 'analyst', 'supervisor']}>
             <AnalyticsDashboard />
           </RoleRoute>
         }

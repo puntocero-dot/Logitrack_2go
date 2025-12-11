@@ -1,0 +1,63 @@
+# Railway Auto-Deploy Workflow
+# Fuerza el redeploy de todos los servicios cuando hay cambios en master
+
+name: Deploy to Railway
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API Gateway
+        if: always()
+        run: railway up --service api-gateway -d
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy User Service
+        if: always()
+        run: railway up --service user-service -d
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Order Service
+        if: always()
+        run: railway up --service order-service -d
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy AI Service
+        if: always()
+        run: railway up --service ai-service -d
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Geolocation Service
+        if: always()
+        run: railway up --service geolocation-service -d
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Web App
+        if: always()
+        run: railway up --service web-app -d
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Client View
+        if: always()
+        run: railway up --service client-view -d
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

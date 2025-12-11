@@ -85,7 +85,7 @@ func main() {
 
 	// ✅ URLs de servicios internos (Docker network)
 	userServiceURL := getEnv("USER_SERVICE_URL", "http://user-service:8081")
-	orderServiceURL := getEnv("ORDER_SERVICE_URL", "http://order-service:8082")
+	orderServiceURL := getEnv("ORDER_SERVICE_URL", "http://order-service:8080")
 	geoServiceURL := getEnv("GEO_SERVICE_URL", "http://geolocation-service:8083")
 	aiServiceURL := getEnv("AI_SERVICE_URL", "http://ai-service:5000")
 

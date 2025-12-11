@@ -69,9 +69,13 @@ func main() {
 	r.DELETE("/motos/:id", handlers.DeleteMoto)
 	r.GET("/motos/available", handlers.GetMotosAvailableForAssignment) // Nueva ruta
 
-	// Branches (Sucursales)
-	r.GET("/branches", handlers.GetBranches)
+	// Branches (Sucursales) - CRUD completo
+	r.GET("/branches", handlers.GetBranches)        // Solo activas
+	r.GET("/branches/all", handlers.GetAllBranches) // Todas (incluyendo inactivas)
 	r.POST("/branches", handlers.CreateBranch)
+	r.PUT("/branches/:id", handlers.UpdateBranch)
+	r.DELETE("/branches/:id", handlers.DeleteBranch)
+	r.PUT("/branches/:id/toggle", handlers.ToggleBranchActive)
 
 	// Optimization & KPIs
 	r.GET("/optimization/assignments", handlers.OptimizeAssignments)

@@ -410,6 +410,75 @@ func CreateBranch(c *gin.Context) {
 	c.JSON(http.StatusCreated, b)
 }
 
+// GetAllBranches returns all branches including inactive ones
+func GetAllBranches(c *gin.Context) {
+	rows, err := db.Query(`SELECT id, name, code, address, latitude, longitude, radius_km, is_active FROM branches ORDER BY name`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var branches []models.Branch
+	for rows.Next() {
+		var b models.Branch
+		if err := rows.Scan(&b.ID, &b.Name, &b.Code, &b.Address, &b.Latitude, &b.Longitude, &b.RadiusKm, &b.IsActive); err != nil {
+			continue
+		}
+		branches = append(branches, b)
+	}
+
+	c.JSON(http.StatusOK, branches)
+}
+
+// UpdateBranch updates an existing branch
+func UpdateBranch(c *gin.Context) {
+	id := c.Param("id")
+	var b models.Branch
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := db.Exec(`UPDATE branches SET name = $1, code = $2, address = $3, 
+	                   latitude = $4, longitude = $5, radius_km = $6, is_active = $7
+	                   WHERE id = $8`,
+		b.Name, b.Code, b.Address, b.Latitude, b.Longitude, b.RadiusKm, b.IsActive, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update branch: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Branch updated"})
+}
+
+// DeleteBranch deletes a branch (soft delete by setting is_active = false)
+func DeleteBranch(c *gin.Context) {
+	id := c.Param("id")
+
+	// Soft delete - just deactivate
+	_, err := db.Exec(`UPDATE branches SET is_active = false WHERE id = $1`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete branch: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Branch deactivated"})
+}
+
+// ToggleBranchActive toggles active status of a branch
+func ToggleBranchActive(c *gin.Context) {
+	id := c.Param("id")
+
+	_, err := db.Exec(`UPDATE branches SET is_active = NOT is_active WHERE id = $1`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to toggle branch status: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Branch status toggled"})
+}
+
 // GetMotosAvailableForAssignment devuelve motos disponibles con capacidad
 func GetMotosAvailableForAssignment(c *gin.Context) {
 	branchID := c.Query("branch_id")

@@ -1,0 +1,375 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import './BranchesManagement.css';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api-gateway-production-ad21.up.railway.app/api';
+
+const BranchesManagement = () => {
+    const [branches, setBranches] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [editing, setEditing] = useState(null);
+    const [showForm, setShowForm] = useState(false);
+    const [filter, setFilter] = useState({ search: '', active: '' });
+    const [form, setForm] = useState({
+        name: '',
+        code: '',
+        address: '',
+        latitude: '',
+        longitude: '',
+        radius_km: 10,
+        is_active: true,
+    });
+    const [message, setMessage] = useState({ type: '', text: '' });
+
+    useEffect(() => {
+        fetchBranches();
+    }, []);
+
+    const fetchBranches = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/branches/all`);
+            setBranches(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error('Error fetching branches', err);
+            setBranches([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleChange = (e) => {
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        setForm({ ...form, [e.target.name]: value });
+    };
+
+    const handleFilterChange = (e) => {
+        setFilter({ ...filter, [e.target.name]: e.target.value });
+    };
+
+    const resetForm = () => {
+        setForm({
+            name: '',
+            code: '',
+            address: '',
+            latitude: '',
+            longitude: '',
+            radius_km: 10,
+            is_active: true,
+        });
+        setEditing(null);
+        setShowForm(false);
+        setMessage({ type: '', text: '' });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setMessage({ type: '', text: '' });
+
+        const payload = {
+            name: form.name,
+            code: form.code.toUpperCase(),
+            address: form.address,
+            latitude: parseFloat(form.latitude) || 0,
+            longitude: parseFloat(form.longitude) || 0,
+            radius_km: parseFloat(form.radius_km) || 10,
+            is_active: form.is_active,
+        };
+
+        try {
+            if (editing) {
+                await axios.put(`${API_BASE_URL}/branches/${editing.id}`, payload);
+                setMessage({ type: 'success', text: '✅ Sucursal actualizada correctamente.' });
+            } else {
+                await axios.post(`${API_BASE_URL}/branches`, payload);
+                setMessage({ type: 'success', text: '✅ Sucursal creada correctamente.' });
+            }
+            resetForm();
+            fetchBranches();
+        } catch (err) {
+            setMessage({ type: 'error', text: '❌ Error: ' + (err.response?.data?.error || err.message) });
+        }
+    };
+
+    const handleEdit = (branch) => {
+        setForm({
+            name: branch.name || '',
+            code: branch.code || '',
+            address: branch.address || '',
+            latitude: branch.latitude || '',
+            longitude: branch.longitude || '',
+            radius_km: branch.radius_km || 10,
+            is_active: branch.is_active !== false,
+        });
+        setEditing(branch);
+        setShowForm(true);
+    };
+
+    const handleToggleActive = async (branch) => {
+        try {
+            await axios.put(`${API_BASE_URL}/branches/${branch.id}/toggle`);
+            setMessage({ type: 'success', text: `✅ Sucursal ${branch.is_active ? 'desactivada' : 'activada'}.` });
+            fetchBranches();
+        } catch (err) {
+            setMessage({ type: 'error', text: '❌ Error al cambiar estado.' });
+        }
+    };
+
+    const handleDelete = async (branch) => {
+        if (!window.confirm(`¿Desactivar la sucursal "${branch.name}"? Los datos se conservarán.`)) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/branches/${branch.id}`);
+            setMessage({ type: 'success', text: '✅ Sucursal desactivada.' });
+            fetchBranches();
+        } catch (err) {
+            setMessage({ type: 'error', text: '❌ Error al desactivar.' });
+        }
+    };
+
+    const filteredBranches = branches.filter(branch => {
+        if (filter.active === 'true' && !branch.is_active) return false;
+        if (filter.active === 'false' && branch.is_active !== false) return false;
+        if (filter.search) {
+            const search = filter.search.toLowerCase();
+            return (
+                branch.name?.toLowerCase().includes(search) ||
+                branch.code?.toLowerCase().includes(search) ||
+                branch.address?.toLowerCase().includes(search)
+            );
+        }
+        return true;
+    });
+
+    if (loading) {
+        return (
+            <div className="branches-management">
+                <div className="loading-spinner">
+                    <div className="spinner"></div>
+                    <p>Cargando sucursales...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="branches-management">
+            <div className="branches-header">
+                <div className="header-content">
+                    <h1>🏢 Gestión de Sucursales</h1>
+                    <p>Administra las sucursales y puntos de operación</p>
+                </div>
+                <button className="btn-add" onClick={() => setShowForm(!showForm)}>
+                    {showForm ? '✕ Cerrar' : '+ Nueva Sucursal'}
+                </button>
+            </div>
+
+            {message.text && (
+                <div className={`alert alert-${message.type}`}>
+                    {message.text}
+                </div>
+            )}
+
+            {/* Formulario de creación/edición */}
+            {showForm && (
+                <div className="branch-form-card">
+                    <h3>{editing ? '✏️ Editar Sucursal' : '➕ Crear Nueva Sucursal'}</h3>
+                    <form onSubmit={handleSubmit} className="branch-form">
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Nombre de la Sucursal *</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    placeholder="Sucursal Centro"
+                                    value={form.name}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Código (único) *</label>
+                                <input
+                                    type="text"
+                                    name="code"
+                                    placeholder="CENTRO"
+                                    value={form.code}
+                                    onChange={handleChange}
+                                    required
+                                    style={{ textTransform: 'uppercase' }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-group full-width">
+                            <label>Dirección</label>
+                            <input
+                                type="text"
+                                name="address"
+                                placeholder="Av. Principal 123, Zona 1"
+                                value={form.address}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Latitud</label>
+                                <input
+                                    type="number"
+                                    name="latitude"
+                                    placeholder="14.6349"
+                                    value={form.latitude}
+                                    onChange={handleChange}
+                                    step="any"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Longitud</label>
+                                <input
+                                    type="number"
+                                    name="longitude"
+                                    placeholder="-90.5069"
+                                    value={form.longitude}
+                                    onChange={handleChange}
+                                    step="any"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Radio de cobertura (km)</label>
+                                <input
+                                    type="number"
+                                    name="radius_km"
+                                    placeholder="10"
+                                    value={form.radius_km}
+                                    onChange={handleChange}
+                                    min="1"
+                                    max="100"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-group checkbox-group">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    name="is_active"
+                                    checked={form.is_active}
+                                    onChange={handleChange}
+                                />
+                                <span className="checkmark"></span>
+                                Sucursal activa
+                            </label>
+                        </div>
+
+                        <div className="form-actions">
+                            <button type="submit" className="btn-primary">
+                                {editing ? '💾 Guardar Cambios' : '✅ Crear Sucursal'}
+                            </button>
+                            <button type="button" className="btn-secondary" onClick={resetForm}>
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* Filtros */}
+            <div className="filters-bar">
+                <div className="filter-group">
+                    <input
+                        type="text"
+                        name="search"
+                        placeholder="🔍 Buscar por nombre, código o dirección..."
+                        value={filter.search}
+                        onChange={handleFilterChange}
+                        className="search-input"
+                    />
+                </div>
+                <div className="filter-group">
+                    <select name="active" value={filter.active} onChange={handleFilterChange}>
+                        <option value="">Todos los estados</option>
+                        <option value="true">Activas</option>
+                        <option value="false">Inactivas</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* Estadísticas */}
+            <div className="stats-row">
+                <div className="stat-card">
+                    <span className="stat-value">{branches.length}</span>
+                    <span className="stat-label">Total Sucursales</span>
+                </div>
+                <div className="stat-card stat-active">
+                    <span className="stat-value">{branches.filter(b => b.is_active !== false).length}</span>
+                    <span className="stat-label">Activas</span>
+                </div>
+                <div className="stat-card stat-inactive">
+                    <span className="stat-value">{branches.filter(b => b.is_active === false).length}</span>
+                    <span className="stat-label">Inactivas</span>
+                </div>
+                <div className="stat-card">
+                    <span className="stat-value">{filteredBranches.length}</span>
+                    <span className="stat-label">Resultados</span>
+                </div>
+            </div>
+
+            {/* Grid de Sucursales */}
+            <div className="branches-grid">
+                {filteredBranches.map(branch => (
+                    <div key={branch.id} className={`branch-card ${branch.is_active === false ? 'inactive' : ''}`}>
+                        <div className="branch-header">
+                            <div className="branch-icon">🏢</div>
+                            <div className="branch-info">
+                                <h3>{branch.name}</h3>
+                                <span className="branch-code">{branch.code}</span>
+                            </div>
+                            <span className={`status-badge ${branch.is_active !== false ? 'active' : 'inactive'}`}>
+                                {branch.is_active !== false ? '✅ Activa' : '❌ Inactiva'}
+                            </span>
+                        </div>
+
+                        <div className="branch-details">
+                            <p className="branch-address">
+                                <span className="icon">📍</span> {branch.address || 'Sin dirección'}
+                            </p>
+                            <div className="branch-coords">
+                                <span><strong>Lat:</strong> {branch.latitude?.toFixed(4) || '-'}</span>
+                                <span><strong>Lng:</strong> {branch.longitude?.toFixed(4) || '-'}</span>
+                                <span><strong>Radio:</strong> {branch.radius_km || 10} km</span>
+                            </div>
+                        </div>
+
+                        <div className="branch-actions">
+                            <button
+                                className="btn-icon btn-edit"
+                                onClick={() => handleEdit(branch)}
+                                title="Editar"
+                            >
+                                ✏️ Editar
+                            </button>
+                            <button
+                                className={`btn-icon ${branch.is_active !== false ? 'btn-deactivate' : 'btn-activate'}`}
+                                onClick={() => handleToggleActive(branch)}
+                                title={branch.is_active !== false ? 'Desactivar' : 'Activar'}
+                            >
+                                {branch.is_active !== false ? '🔒 Desactivar' : '🔓 Activar'}
+                            </button>
+                        </div>
+                    </div>
+                ))}
+
+                {filteredBranches.length === 0 && (
+                    <div className="empty-state">
+                        <span className="empty-icon">🏢</span>
+                        <p>No se encontraron sucursales</p>
+                        <button className="btn-add" onClick={() => setShowForm(true)}>
+                            + Crear primera sucursal
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default BranchesManagement;

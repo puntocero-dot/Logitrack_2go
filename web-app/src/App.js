@@ -14,6 +14,7 @@ import ManagerDashboard from './components/ManagerDashboard';
 import MotoTransfers from './components/MotoTransfers';
 import LiveMap from './components/LiveMap';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import BranchesManagement from './components/BranchesManagement';
 import Login from './components/Login';
 import './styles.css';
 
@@ -178,6 +179,16 @@ function AppRoutes() {
           <AdminRoute>
             <UsersManagement />
           </AdminRoute>
+        }
+      />
+
+      {/* Gestión de Sucursales */}
+      <Route
+        path="/branches"
+        element={
+          <RoleRoute allowedRoles={['superadmin', 'admin']}>
+            <BranchesManagement />
+          </RoleRoute>
         }
       />
 

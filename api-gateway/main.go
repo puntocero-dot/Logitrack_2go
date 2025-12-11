@@ -140,7 +140,11 @@ func main() {
 	// ✅ RUTAS DE SUCURSALES (BRANCHES)
 	// ========================================
 	r.GET("/branches", proxyTo(orderServiceURL, "/branches"))
+	r.GET("/branches/all", proxyTo(orderServiceURL, "/branches/all"))
 	r.POST("/branches", proxyTo(orderServiceURL, "/branches"))
+	r.PUT("/branches/:id", proxyToWithParam(orderServiceURL, "/branches"))
+	r.DELETE("/branches/:id", proxyToWithParam(orderServiceURL, "/branches"))
+	r.PUT("/branches/:id/toggle", proxyToWithNestedParam(orderServiceURL, "/branches", "/toggle"))
 
 	// ========================================
 	// ✅ RUTAS DE OPTIMIZACIÓN

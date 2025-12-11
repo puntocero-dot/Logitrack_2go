@@ -90,6 +90,13 @@ func main() {
 	r.POST("/visits/:id/checklist", handlers.SaveChecklistResponses)
 	r.GET("/visits/:id/checklist", handlers.GetVisitChecklist)
 
+	// Transferencias de Motos entre Sucursales
+	r.POST("/transfers", handlers.TransferMoto)
+	r.PUT("/motos/:id/return", handlers.ReturnMotoToBranch)
+	r.GET("/transfers", handlers.GetTransferredMotos)
+	r.GET("/transfers/history", handlers.GetTransferHistory)
+	r.POST("/transfers/expire", handlers.ExpireTransfers) // Cron job endpoint
+
 	// Endpoint de métricas Prometheus
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 

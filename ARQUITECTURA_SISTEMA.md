@@ -19,305 +19,232 @@
 │                          │   (Go + Gin)    │   Auth, Logging           │
 │                          └────────┬────────┘                           │
 │                                   │                                     │
-│         ┌─────────────────────────┼─────────────────────────┐          │
-│         │                         │                         │          │
-│  ┌──────▼──────┐  ┌───────────────▼───────────────┐  ┌──────▼──────┐  │
-│  │ User Service│  │       Order Service           │  │  AI Service │  │
-│  │   (Go)      │  │         (Go)                  │  │  (Python)   │  │
-│  │             │  │  • Orders  • Motos            │  │             │  │
-│  │ • Auth      │  │  • Branches • Routes          │  │ • Optimize  │  │
-│  │ • Users     │  │  • KPIs    • Optimization     │  │ • ETA Calc  │  │
-│  │ • Roles     │  │                               │  │             │  │
-│  └──────┬──────┘  └───────────────┬───────────────┘  └─────────────┘  │
-│         │                         │                                     │
-│         └─────────────────────────┴─────────────────────────┐          │
-│                                   │                         │          │
-│                          ┌────────▼────────┐  ┌─────────────▼────────┐ │
-│                          │   PostgreSQL    │  │       Redis          │ │
-│                          │   (Persistence) │  │   (Cache/Sessions)   │ │
-│                          └─────────────────┘  └──────────────────────┘ │
+│    ┌──────────────────────────────┼──────────────────────────────┐     │
+│    │                              │                              │     │
+│  ┌─▼────────┐  ┌─────────────────▼─────────────────┐  ┌─────────▼──┐  │
+│  │  User    │  │         Order Service             │  │Integration │  │
+│  │ Service  │  │  • Orders  • Motos  • Branches    │  │  Service   │  │
+│  │  (Go)    │  │  • Routes  • KPIs  • Visits       │  │   (Go)     │  │
+│  └─────┬────┘  └─────────────────┬─────────────────┘  └────────────┘  │
+│        │                         │                                     │
+│  ┌─────▼─────┐          ┌────────▼────────┐                           │
+│  │ AI Service│          │   PostgreSQL    │                           │
+│  │ (Python)  │          │  (Persistence)  │                           │
+│  └───────────┘          └─────────────────┘                           │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 👥 Jerarquía de Roles
+## 🏢 Modelo de Sucursales (CRÍTICO)
 
 ```
-                    ┌─────────────────────┐
-                    │   ADMIN (Tú)        │ ← Acceso total, configuración
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │ Gerente Logística   │ ← Overview gerencial, KPIs globales
-                    └──────────┬──────────┘
-                               │
-          ┌────────────────────┼────────────────────┐
-          │                    │                    │
-┌─────────▼─────────┐ ┌────────▼────────┐ ┌────────▼────────┐
-│  Coordinador      │ │  Supervisor     │ │ Analista Rutas  │
-│  (Visitas/Audit)  │ │  (Operaciones)  │ │ (Reportes)      │
-└─────────┬─────────┘ └────────┬────────┘ └─────────────────┘
-          │                    │
-          │           ┌────────▼────────┐
-          │           │     Drivers     │
-          │           │  (Motoristas)   │
-          │           └─────────────────┘
-          │
-┌─────────▼─────────┐
-│   Sucursales      │
-│   (Branches)      │
-└───────────────────┘
+                    ┌─────────────────────────────────┐
+                    │         LOGITRACK               │
+                    │   (Multi-Sucursal / Multi-Tenant)│
+                    └────────────────┬────────────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+│  SUCURSAL A   │          │  SUCURSAL B   │          │  SUCURSAL C   │
+│   (Central)   │          │  (Zona Norte) │          │  (Zona Sur)   │
+├───────────────┤          ├───────────────┤          ├───────────────┤
+│               │          │               │          │               │
+│ 👤 Usuarios   │          │ 👤 Usuarios   │          │ 👤 Usuarios   │
+│  - Supervisor │          │  - Supervisor │          │  - Supervisor │
+│  - Analista   │          │  - Drivers    │          │  - Drivers    │
+│               │          │               │          │               │
+│ 🏍️ Motos     │          │ 🏍️ Motos     │          │ 🏍️ Motos     │
+│  - MOTO-001   │◄────────►│  - MOTO-004   │          │  - MOTO-007   │
+│  - MOTO-002   │Transferir│  - MOTO-005   │          │  - MOTO-008   │
+│  - MOTO-003   │ temporal │  - MOTO-006   │          │  - MOTO-009   │
+│               │          │               │          │               │
+│ 📦 Pedidos    │          │ 📦 Pedidos    │          │ 📦 Pedidos    │
+│  (Solo suyos) │          │  (Solo suyos) │          │  (Solo suyos) │
+│               │          │               │          │               │
+└───────────────┘          └───────────────┘          └───────────────┘
+        ▲                            ▲                            ▲
+        │                            │                            │
+        └────────────────────────────┼────────────────────────────┘
+                                     │
+                    ┌────────────────▼────────────────┐
+                    │     ROLES CON VISTA GLOBAL      │
+                    │  • Admin (ve todo)              │
+                    │  • Gerente (ve todas las KPIs)  │
+                    │  • Coordinador (visita todas)   │
+                    └─────────────────────────────────┘
+```
+
+### Reglas de Aislamiento por Sucursal:
+
+| Rol | Alcance de Vista | Puede Transferir Motos |
+|-----|------------------|------------------------|
+| **Admin** | Todas las sucursales | ✅ Sí |
+| **Gerente** | Todas las sucursales (solo lectura) | ❌ No |
+| **Coordinador** | Todas las sucursales (visitas) | ❌ No |
+| **Supervisor** | Solo SU sucursal | ✅ Sí (a otra sucursal) |
+| **Analista** | Solo SU sucursal | ❌ No |
+| **Driver** | Solo SUS pedidos asignados | ❌ No |
+
+---
+
+## 👥 Jerarquía Organizacional
+
+```
+                         ┌──────────────┐
+                         │    ADMIN     │ ← Configuración global
+                         │  (Sistema)   │   Todos los accesos
+                         └──────┬───────┘
+                                │
+              ┌─────────────────┼─────────────────┐
+              │                 │                 │
+              ▼                 ▼                 ▼
+     ┌────────────────┐ ┌──────────────┐ ┌──────────────────┐
+     │    GERENTE     │ │ COORDINADOR  │ │    ANALISTA      │
+     │  (Logística)   │ │   (Visitas)  │ │    (Reportes)    │
+     │                │ │              │ │                  │
+     │ • KPIs globales│ │ • Check-in   │ │ • Alertas        │
+     │ • Overview     │ │ • Checklist  │ │ • Predicción     │
+     │ • Comparativos │ │ • Auditorías │ │ • Balanceo       │
+     └────────────────┘ └──────────────┘ └──────────────────┘
+              │
+              │ Supervisa
+              ▼
+     ┌─────────────────────────────────────────────────┐
+     │                  SUCURSAL X                     │
+     ├─────────────────────────────────────────────────┤
+     │                                                 │
+     │    ┌──────────────┐                             │
+     │    │  SUPERVISOR  │ ← Gestiona operaciones      │
+     │    └──────┬───────┘   de SU sucursal            │
+     │           │                                     │
+     │    ┌──────┴───────┐                             │
+     │    │              │                             │
+     │    ▼              ▼                             │
+     │ ┌──────┐     ┌──────┐     ┌──────┐             │
+     │ │MOTO 1│     │MOTO 2│     │MOTO 3│             │
+     │ │Driver│     │Driver│     │Driver│             │
+     │ └──────┘     └──────┘     └──────┘             │
+     │                                                 │
+     │ ┌──────────────────────────────────────────┐   │
+     │ │           PEDIDOS DE LA SUCURSAL         │   │
+     │ │  • Pedido 101  • Pedido 102  • Pedido 103│   │
+     │ └──────────────────────────────────────────┘   │
+     │                                                 │
+     └─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔗 Flujo de Datos Actual
-
-### 1. Creación de Pedido
-```
-Cliente → Sistema Externo → [FUTURO: API Integration] → Order Service → PostgreSQL
-                                                              ↓
-                                                        Status: pending
-```
-
-### 2. Asignación de Pedidos (IA)
-```
-Supervisor → "Optimizar" → API Gateway → Order Service → AI Service
-                                              ↓
-                                        Obtiene motos disponibles
-                                        Obtiene pedidos pendientes
-                                              ↓
-                                        AI calcula Round-Robin
-                                              ↓
-                                        Sugerencias de asignación
-```
-
-### 3. Ejecución de Entrega
-```
-Driver → Inicia turno → GPS Tracking → Recoge pedido → En ruta → Entregado
-              ↓              ↓              ↓            ↓          ↓
-        shift: ACTIVE   route_points   status:assigned  in_route  delivered
-```
-
----
-
-## 📁 Estructura de Microservicios
+## 🔄 Flujo de Transferencia de Motos
 
 ```
-Logitrack/
-├── api-gateway/          # Puerta de entrada (Go)
-│   ├── main.go           # Rutas y proxy
-│   └── middleware/       # Rate limit, auth, CORS
-│
-├── user-service/         # Gestión de usuarios (Go)
-│   ├── handlers/         # Login, CRUD usuarios
-│   └── models/           # User, roles
-│
-├── order-service/        # Core del negocio (Go)
-│   ├── handlers/
-│   │   ├── order.go      # CRUD pedidos
-│   │   ├── moto.go       # CRUD motos
-│   │   ├── optimization.go # Integración IA
-│   │   └── kpis.go       # Métricas
-│   └── models/           # Order, Moto, Branch, Route
-│
-├── ai-service/           # Inteligencia (Python)
-│   └── app.py            # Algoritmo Round-Robin
-│
-├── geolocation-service/  # GPS Tracking (Go)
-│   └── handlers/         # Ubicaciones en tiempo real
-│
-├── web-app/              # Frontend principal (React)
-└── client-view/          # Vista cliente (React)
+ESCENARIO: Sucursal A tiene muchos pedidos, Sucursal B tiene motos libres
+
+┌─────────────┐                              ┌─────────────┐
+│ SUCURSAL A  │                              │ SUCURSAL B  │
+│             │                              │             │
+│ 🏍️ MOTO-001 │                              │ 🏍️ MOTO-004 │
+│ 🏍️ MOTO-002 │                              │ 🏍️ MOTO-005 │ ← Libre
+│             │                              │ 🏍️ MOTO-006 │ ← Libre
+│ 📦 15 pedidos│                              │ 📦 2 pedidos │
+│    pendientes│                              │    pendientes│
+└──────┬──────┘                              └──────┬──────┘
+       │                                            │
+       │  Supervisor A solicita apoyo               │
+       │◄───────────────────────────────────────────┤
+       │                                            │
+       │        Admin/Gerente autoriza              │
+       │────────────────────────────────────────────►
+       │                                            │
+       │     MOTO-005 transferida temporalmente     │
+       │◄───────────────────────────────────────────┤
+       │                                            │
+       ▼                                            ▼
+┌─────────────┐                              ┌─────────────┐
+│ SUCURSAL A  │                              │ SUCURSAL B  │
+│             │                              │             │
+│ 🏍️ MOTO-001 │                              │ 🏍️ MOTO-004 │
+│ 🏍️ MOTO-002 │                              │ 🏍️ MOTO-006 │
+│ 🏍️ MOTO-005 │ ← Temporal                   │             │
+│   (de B)    │                              │             │
+└─────────────┘                              └─────────────┘
+
+* Al finalizar el turno, MOTO-005 regresa a Sucursal B
 ```
 
 ---
 
-## 🚂 Railway: Problema del Monorepo
+## 📋 Modelo de Datos Actualizado
 
-### ¿Por qué tienes que actualizar servicio por servicio?
+```sql
+-- Usuarios pertenecen a una sucursal
+users (
+  id, name, email, role, 
+  branch VARCHAR(50) ← Sucursal asignada ('central', 'norte', etc.)
+)
 
-Railway detecta cambios en el repositorio completo, pero cada "Service" en Railway está configurado con su propio **Root Directory**. Si no hay cambios en ESA carpeta específica, Railway no reconstruye ese servicio.
+-- Motos pertenecen a una sucursal
+motos (
+  id, license_plate, driver_id,
+  branch_id INTEGER ← Sucursal home (dónde normalmente opera)
+  current_branch_id INTEGER ← Sucursal actual (puede ser diferente si está transferido)
+  transfer_expires_at TIMESTAMP ← Cuándo termina la transferencia temporal
+)
 
-### Solución: railway.json (Archivo de Configuración)
+-- Pedidos pertenecen a una sucursal
+orders (
+  id, client_name, address, status,
+  branch VARCHAR(50) ← Sucursal que gestiona este pedido
+)
 
-Crear un archivo `railway.json` en la raíz que configure todos los servicios:
+-- Sucursales con geolocalización
+branches (
+  id, name, code, latitude, longitude, radius_km
+)
+```
 
-```json
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "DOCKERFILE"
-  },
-  "deploy": {
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
-  }
+---
+
+## 🔐 Filtros de Seguridad por Sucursal
+
+### Backend (order-service):
+
+```go
+// Al obtener pedidos, filtrar por sucursal del usuario
+func GetOrders(c *gin.Context) {
+    userBranch := c.GetHeader("X-User-Branch")
+    userRole := c.GetHeader("X-User-Role")
+    
+    query := "SELECT * FROM orders"
+    
+    // Solo admin/gerente ven todas las sucursales
+    if userRole != "admin" && userRole != "manager" {
+        query += " WHERE branch = '" + userBranch + "'"
+    }
+    // ...
 }
 ```
 
-Pero la mejor solución es:
+### Frontend (React):
 
-### Opción 1: GitHub Actions (Automatización)
-Crear un workflow que detecte qué carpetas cambiaron y dispare rebuilds solo de esos servicios.
-
-### Opción 2: Railway CLI
-```bash
-# Instalar CLI
-npm install -g @railway/cli
-
-# Login
-railway login
-
-# Forzar redeploy de un servicio
-railway up --service api-gateway
-railway up --service order-service
-```
-
-### Opción 3: Script de Deploy Unificado
-Lo creo más adelante con todas las variables de entorno.
-
----
-
-## 🔌 Integración con Sistemas Externos
-
-### Escenario: Cliente tiene su propio sistema de pedidos
-
-```
-┌─────────────────────┐         ┌─────────────────────────────────┐
-│  Sistema del        │         │          LOGITRACK              │
-│  Cliente            │         │                                 │
-│  ┌───────────────┐  │         │  ┌─────────────────────────┐   │
-│  │ Base de Datos │──┼────────▶│  │  Integration Service    │   │
-│  │ (MySQL/Oracle)│  │ Opción 1│  │  (Nuevo microservicio)  │   │
-│  └───────────────┘  │         │  │                         │   │
-│                     │         │  │  • DB Connector         │   │
-│  ┌───────────────┐  │         │  │  • API Poller           │   │
-│  │ API REST      │──┼────────▶│  │  • Webhook Receiver     │   │
-│  │               │  │ Opción 2│  │  • Data Transformer     │   │
-│  └───────────────┘  │         │  └───────────┬─────────────┘   │
-│                     │         │              │                  │
-│  ┌───────────────┐  │         │              ▼                  │
-│  │ Webhook Push  │──┼────────▶│  ┌─────────────────────────┐   │
-│  │               │  │ Opción 3│  │    Order Service        │   │
-│  └───────────────┘  │         │  └─────────────────────────┘   │
-└─────────────────────┘         └─────────────────────────────────┘
-```
-
-### Opciones de Integración:
-
-| Método | Descripción | Complejidad |
-|--------|-------------|-------------|
-| **API Polling** | Consultamos su API cada X minutos | Baja |
-| **Webhook** | Ellos nos envían pedidos cuando se crean | Media |
-| **DB Direct** | Conectamos directamente a su BD | Alta (requiere VPN) |
-| **Archivo/FTP** | Cargan CSV que procesamos | Baja |
-| **Cola de Mensajes** | RabbitMQ/Kafka entre sistemas | Alta |
-
----
-
-## 🖥️ Despliegue On-Premise (Local)
-
-### ¿Por qué un cliente querría esto?
-1. **Seguridad**: Datos sensibles no salen de sus instalaciones
-2. **Latencia**: Sin dependencia de internet
-3. **Regulación**: Algunas industrias lo exigen
-4. **Costo**: Sin costos de nube recurrentes
-
-### Nuestra Preparación Actual:
-
-✅ **Docker Compose**: Ya funciona 100% local
-✅ **Variables de Entorno**: Configuración externa (.env)
-✅ **PostgreSQL/Redis**: Incluidos en el stack
-
-### Lo que necesitaríamos agregar:
-
-| Componente | Para On-Premise |
-|------------|-----------------|
-| **Instalador** | Script .bat/.sh de instalación |
-| **Certificados** | HTTPS con Let's Encrypt o certificados del cliente |
-| **Backup** | Cron jobs para respaldos automáticos |
-| **Monitoreo** | Prometheus + Grafana incluidos |
-| **Actualización** | Mecanismo para aplicar updates |
-
----
-
-## 📋 PRÓXIMOS DESARROLLOS
-
-### 1. Coordinador App (NUEVO)
-```
-Funcionalidades:
-├── Check-in en sucursal (GPS + hora)
-├── Checklist de auditoría configurable
-├── Toma de fotos con geolocalización
-├── Tiempo en sucursal (duración)
-├── Reportes de hallazgos
-└── Historial de visitas
-```
-
-### 2. Gerente Dashboard (NUEVO)
-```
-Métricas Gerenciales:
-├── KPIs globales por sucursal
-├── Comparativo de rendimiento
-├── Alertas de SLA
-├── Mapa de calor de entregas
-└── Reportes exportables (PDF/Excel)
-```
-
-### 3. Analista de Rutas (NUEVO)
-```
-Herramientas:
-├── Alertas de sucursal sin motos
-├── Predicción de demanda
-├── Balanceo de carga sugerido
-└── Dashboard de eficiencia
-```
-
-### 4. Integration Service (NUEVO)
-```
-Conectores:
-├── API REST genérico
-├── Base de datos (MySQL, Oracle, PostgreSQL)
-├── Webhooks (recibir/enviar)
-├── Archivos (CSV, Excel)
-└── Cola de mensajes (RabbitMQ)
+```javascript
+// El usuario solo ve opciones de SU sucursal
+const orders = userRole === 'admin' 
+  ? allOrders 
+  : allOrders.filter(o => o.branch === userBranch);
 ```
 
 ---
 
-## 🗺️ ROADMAP PROPUESTO
+## 🚀 Siguiente Implementación Necesaria
 
-### Fase 1: Estabilización (1-2 semanas)
-- [ ] Resolver tema Railway (GitHub Actions)
-- [ ] Pruebas completas del flujo actual
-- [ ] Documentación de API
+1. **Agregar `current_branch_id` a motos** para transferencias
+2. **Filtrar queries por branch del usuario**
+3. **Endpoint de transferencia temporal**
+4. **UI para solicitar/aprobar transferencias**
 
-### Fase 2: Nuevos Roles (2-3 semanas)
-- [ ] Modelo de datos para Coordinadores
-- [ ] App de Coordinadores (check-in, checklist)
-- [ ] Dashboard Gerencial
-- [ ] Rol Analista de Rutas
-
-### Fase 3: Integraciones (2-3 semanas)
-- [ ] Integration Service base
-- [ ] Conector API REST
-- [ ] Conector Database
-- [ ] Webhook receiver
-
-### Fase 4: Enterprise Ready (2-3 semanas)
-- [ ] Instalador On-Premise
-- [ ] Monitoreo (Prometheus/Grafana)
-- [ ] Backup automatizado
-- [ ] Multi-tenant support
-
----
-
-## 📞 ¿SIGUIENTE PASO?
-
-1. **Railway Fix**: Crear GitHub Action para auto-deploy
-2. **Coordinador App**: Empezar el nuevo módulo
-3. **Integration Service**: Preparar para conectar con cliente
-4. **Otro**: Especificar qué necesitas primero
+¿Deseas que implemente estos cambios ahora?

@@ -16,23 +16,38 @@ import (
 func GetMotos(c *gin.Context) {
 	branchID := c.Query("branch_id")
 	status := c.Query("status")
+	userBranch := c.GetHeader("X-User-Branch")
+	userRole := c.GetHeader("X-User-Role")
 
-	query := `SELECT id, license_plate, driver_id, branch_id, status, 
-	          latitude, longitude, max_orders_capacity, current_orders_count 
-	          FROM motos WHERE 1=1`
+	// Query actualizada para usar current_branch_id (sucursal efectiva)
+	query := `SELECT m.id, m.license_plate, m.driver_id, m.branch_id, 
+	          COALESCE(m.current_branch_id, m.branch_id) as effective_branch_id,
+	          m.status, m.latitude, m.longitude, m.max_orders_capacity, m.current_orders_count,
+	          m.transfer_expires_at, m.transfer_reason,
+	          CASE WHEN m.current_branch_id != m.branch_id AND m.current_branch_id IS NOT NULL THEN true ELSE false END as is_transferred
+	          FROM motos m WHERE 1=1`
 	args := []interface{}{}
 	argCount := 0
 
+	// Filtro explícito por branch_id del query param
 	if branchID != "" {
 		argCount++
-		query += " AND branch_id = $" + strconv.Itoa(argCount)
+		query += " AND COALESCE(m.current_branch_id, m.branch_id) = $" + strconv.Itoa(argCount)
 		args = append(args, branchID)
+	} else if userRole != "admin" && userRole != "manager" && userRole != "coordinator" && userBranch != "" {
+		// Si no es admin/manager/coordinator, filtrar por sucursal del usuario
+		argCount++
+		query += " AND COALESCE(m.current_branch_id, m.branch_id) = (SELECT id FROM branches WHERE code = $" + strconv.Itoa(argCount) + ")"
+		args = append(args, userBranch)
 	}
+
 	if status != "" {
 		argCount++
-		query += " AND status = $" + strconv.Itoa(argCount)
+		query += " AND m.status = $" + strconv.Itoa(argCount)
 		args = append(args, status)
 	}
+
+	query += " ORDER BY m.license_plate"
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
@@ -41,30 +56,53 @@ func GetMotos(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	var motos []models.Moto
+	var motos []map[string]interface{}
 	for rows.Next() {
-		var m models.Moto
-		var driverID, branchID sql.NullInt64
+		var id, maxCapacity, currentCount int
+		var licensePlate, status string
+		var driverID, branchID, effectiveBranchID sql.NullInt64
 		var lat, lng sql.NullFloat64
-		if err := rows.Scan(&m.ID, &m.LicensePlate, &driverID, &branchID, &m.Status,
-			&lat, &lng, &m.MaxOrdersCapacity, &m.CurrentOrdersCount); err != nil {
+		var transferExpires sql.NullTime
+		var transferReason sql.NullString
+		var isTransferred bool
+
+		if err := rows.Scan(&id, &licensePlate, &driverID, &branchID, &effectiveBranchID,
+			&status, &lat, &lng, &maxCapacity, &currentCount,
+			&transferExpires, &transferReason, &isTransferred); err != nil {
 			continue
 		}
+
+		moto := map[string]interface{}{
+			"id":                   id,
+			"license_plate":        licensePlate,
+			"status":               status,
+			"max_orders_capacity":  maxCapacity,
+			"current_orders_count": currentCount,
+			"is_transferred":       isTransferred,
+		}
 		if driverID.Valid {
-			v := int(driverID.Int64)
-			m.DriverID = &v
+			moto["driver_id"] = driverID.Int64
 		}
 		if branchID.Valid {
-			v := int(branchID.Int64)
-			m.BranchID = &v
+			moto["branch_id"] = branchID.Int64
+		}
+		if effectiveBranchID.Valid {
+			moto["effective_branch_id"] = effectiveBranchID.Int64
 		}
 		if lat.Valid {
-			m.Latitude = &lat.Float64
+			moto["latitude"] = lat.Float64
 		}
 		if lng.Valid {
-			m.Longitude = &lng.Float64
+			moto["longitude"] = lng.Float64
 		}
-		motos = append(motos, m)
+		if transferExpires.Valid {
+			moto["transfer_expires_at"] = transferExpires.Time
+		}
+		if transferReason.Valid {
+			moto["transfer_reason"] = transferReason.String
+		}
+
+		motos = append(motos, moto)
 	}
 
 	c.JSON(http.StatusOK, motos)

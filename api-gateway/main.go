@@ -163,6 +163,15 @@ func main() {
 	r.GET("/visits/:id/checklist", proxyToWithNestedParam(orderServiceURL, "/visits", "/checklist"))
 
 	// ========================================
+	// ✅ RUTAS DE TRANSFERENCIAS (Motos entre Sucursales)
+	// ========================================
+	r.POST("/transfers", proxyTo(orderServiceURL, "/transfers"))
+	r.PUT("/motos/:id/return", proxyToWithNestedParam(orderServiceURL, "/motos", "/return"))
+	r.GET("/transfers", proxyTo(orderServiceURL, "/transfers"))
+	r.GET("/transfers/history", proxyTo(orderServiceURL, "/transfers/history"))
+	r.POST("/transfers/expire", proxyTo(orderServiceURL, "/transfers/expire"))
+
+	// ========================================
 	// ✅ RUTAS DE GEOLOCALIZACIÓN (wildcard)
 	// ========================================
 	r.Any("/geo/*path", proxyWildcard(geoServiceURL))

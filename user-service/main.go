@@ -43,7 +43,7 @@ func initRedis() {
 }
 
 func seedUsers() {
-	// Hash passwords before inserting. Use enviroment variable or default for dev only.
+	// Hash passwords before inserting
 	defaultPass := os.Getenv("SEED_USER_PASSWORD")
 	if defaultPass == "" {
 		defaultPass = "admin123" // Default password for development
@@ -51,17 +51,36 @@ func seedUsers() {
 
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
 
+	// Superadmin password (specific)
+	superadminPass := "Diego1989r$"
+	superadminHash, _ := bcrypt.GenerateFromPassword([]byte(superadminPass), bcrypt.DefaultCost)
+
 	log.Printf("🌱 Seeding users with password hash...")
 
-	// First, ensure admin@logitrack.com has 'admin' role (force update)
+	// Create superadmin first
 	_, err := db.Exec(`
-		INSERT INTO users (email, password_hash, role) VALUES
-		('admin@logitrack.com', $1, 'admin'),
-		('supervisor@logitrack.com', $1, 'supervisor'),
-		('manager@logitrack.com', $1, 'manager'),
-		('coordinator@logitrack.com', $1, 'coordinator'),
-		('analyst@logitrack.com', $1, 'analyst'),
-		('driver@logitrack.com', $1, 'driver')
+		INSERT INTO users (name, email, password_hash, role, active) VALUES
+		('Super Admin', 'superadmin@logitrack.com', $1, 'superadmin', true)
+		ON CONFLICT (email) DO UPDATE SET
+			password_hash = EXCLUDED.password_hash,
+			role = EXCLUDED.role,
+			active = true
+	`, superadminHash)
+	if err != nil {
+		log.Println("⚠️ Failed to seed superadmin:", err)
+	} else {
+		log.Println("✅ Superadmin created: superadmin@logitrack.com")
+	}
+
+	// Seed other users
+	_, err = db.Exec(`
+		INSERT INTO users (name, email, password_hash, role, active) VALUES
+		('Admin User', 'admin@logitrack.com', $1, 'admin', true),
+		('Supervisor', 'supervisor@logitrack.com', $1, 'supervisor', true),
+		('Manager', 'manager@logitrack.com', $1, 'manager', true),
+		('Coordinator', 'coordinator@logitrack.com', $1, 'coordinator', true),
+		('Analyst', 'analyst@logitrack.com', $1, 'analyst', true),
+		('Driver', 'driver@logitrack.com', $1, 'driver', true)
 		ON CONFLICT (email) DO UPDATE SET
 			password_hash = EXCLUDED.password_hash,
 			role = EXCLUDED.role

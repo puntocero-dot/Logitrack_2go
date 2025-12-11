@@ -52,6 +52,8 @@ function DriverRoute({ children }) {
 function RoleRoute({ children, allowedRoles }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
+  // Superadmin siempre tiene acceso
+  if (user.role === 'superadmin') return children;
   if (!allowedRoles.includes(user.role)) return <Navigate to="/dashboard" replace />;
   return children;
 }
@@ -76,6 +78,8 @@ function AppRoutes() {
   const getHomeRoute = () => {
     if (!user) return '/login';
     switch (user.role) {
+      case 'superadmin':
+        return '/dashboard';
       case 'admin':
         return '/dashboard';
       case 'manager':

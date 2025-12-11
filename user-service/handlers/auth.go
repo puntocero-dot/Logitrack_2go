@@ -48,12 +48,14 @@ func Login(c *gin.Context) {
 	// Buscar usuario por email (usando password_hash)
 	var user User
 	var passwordHash string
+	var name sql.NullString
+	var active bool
 
 	err := db.QueryRow(`
-		SELECT id, email, password_hash, role
+		SELECT id, COALESCE(name, ''), email, password_hash, role, COALESCE(active, true)
 		FROM users 
 		WHERE email = $1
-	`, req.Email).Scan(&user.ID, &user.Email, &passwordHash, &user.Role)
+	`, req.Email).Scan(&user.ID, &name, &user.Email, &passwordHash, &user.Role, &active)
 
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciales inválidas"})
@@ -62,6 +64,17 @@ func Login(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al buscar usuario"})
 		return
+	}
+
+	// Verificar que usuario esté activo
+	if !active {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Usuario desactivado. Contacte al administrador."})
+		return
+	}
+
+	// Asignar nombre
+	if name.Valid {
+		user.Name = &name.String
 	}
 
 	// Verificar contraseña con bcrypt

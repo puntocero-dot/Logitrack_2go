@@ -18,8 +18,21 @@ const Navbar = () => {
     const links = [];
     const role = user?.role;
 
+    // Superadmin: acceso total + configuración del sistema
+    if (role === 'superadmin') {
+      links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
+      links.push({ path: '/map', label: '🗺️ Mapa', icon: '🗺️' });
+      links.push({ path: '/analytics', label: '📉 Analytics', icon: '📉' });
+      links.push({ path: '/manager', label: '📈 Gerencial', icon: '📈' });
+      links.push({ path: '/coordinator', label: '📋 Coordinador', icon: '📋' });
+      links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
+      links.push({ path: '/admin', label: '🏍️ Motos', icon: '🏍️' });
+      links.push({ path: '/branches', label: '🏢 Sucursales', icon: '🏢' });
+      links.push({ path: '/users', label: '👥 Usuarios', icon: '👥' });
+      links.push({ path: window.location.origin + '/docs/index.html', label: '📄 Docs', icon: '📄', external: true });
+    }
     // Admin: acceso total
-    if (role === 'admin') {
+    else if (role === 'admin') {
       links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
       links.push({ path: '/map', label: '🗺️ Mapa', icon: '🗺️' });
       links.push({ path: '/analytics', label: '📉 Analytics', icon: '📉' });

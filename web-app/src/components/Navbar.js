@@ -28,7 +28,7 @@ const Navbar = () => {
       links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
       links.push({ path: '/admin', label: '🏍️ Motos', icon: '🏍️' });
       links.push({ path: '/users', label: '👥 Usuarios', icon: '👥' });
-      links.push({ path: '/docs/', label: '📄 Docs', icon: '📄', external: true });
+      links.push({ path: window.location.origin + '/docs/index.html', label: '📄 Docs', icon: '📄', external: true });
     }
     // Manager: vista gerencial + supervisor
     else if (role === 'manager') {
@@ -49,7 +49,7 @@ const Navbar = () => {
       links.push({ path: '/map', label: '🗺️ Mapa', icon: '🗺️' });
       links.push({ path: '/analytics', label: '📉 Analytics', icon: '📉' });
       links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
-      links.push({ path: '/docs/', label: '📄 Docs', icon: '📄', external: true });
+      links.push({ path: window.location.origin + '/docs/index.html', label: '📄 Docs', icon: '📄', external: true });
     }
     // Analyst: reportes
     else if (role === 'analyst') {

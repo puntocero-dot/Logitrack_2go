@@ -1,6 +1,6 @@
 package main
 
-// Version: 2.1.0 - December 2024 - Forced redeploy
+// Version: 3.0.0 - Superadmin + Users Management + Branches
 import (
 	"database/sql"
 	"log"

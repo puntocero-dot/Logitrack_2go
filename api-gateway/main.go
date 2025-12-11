@@ -1,6 +1,6 @@
 package main
 
-// Version: 2.1.0 - December 2024 - Forced redeploy with delivery-proof routes
+// Version: 3.0.0 - Branches CRUD + Full Users Management
 import (
 	"net/http"
 	"net/http/httputil"

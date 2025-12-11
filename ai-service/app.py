@@ -1,6 +1,6 @@
 """
 AI Service - Logitrack Route Optimization
-Version: 2.1.0 - December 2024 - Forced redeploy
+Version: 3.0.0 - Force redeploy Dec 2024
 """
 
 from flask import Flask, request, jsonify

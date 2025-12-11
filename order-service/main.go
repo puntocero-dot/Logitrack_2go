@@ -77,6 +77,18 @@ func main() {
 	r.GET("/optimization/assignments", handlers.OptimizeAssignments)
 	r.POST("/optimization/apply", handlers.ApplyOptimizedAssignments)
 	r.GET("/kpis/motos", handlers.GetMotosKPIs)
+	r.GET("/kpis/branches", handlers.GetBranchKPIs) // Dashboard Gerencial
+
+	// Coordinadores - Visitas
+	r.POST("/visits/check-in", handlers.CheckIn)
+	r.PUT("/visits/:id/check-out", handlers.CheckOut)
+	r.GET("/visits/active", handlers.GetActiveVisit)
+	r.GET("/visits", handlers.GetVisitHistory)
+
+	// Coordinadores - Checklist
+	r.GET("/checklist/templates", handlers.GetChecklistTemplates)
+	r.POST("/visits/:id/checklist", handlers.SaveChecklistResponses)
+	r.GET("/visits/:id/checklist", handlers.GetVisitChecklist)
 
 	// Endpoint de métricas Prometheus
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))

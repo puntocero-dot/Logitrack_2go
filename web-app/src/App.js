@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import axios from 'axios';
@@ -9,6 +9,8 @@ import DriverDashboard from './components/DriverDashboard';
 import DriverShiftPanel from './components/DriverShiftPanel';
 import UsersManagement from './components/UsersManagement';
 import MotoProfile from './components/MotoProfile';
+import CoordinatorDashboard from './components/CoordinatorDashboard';
+import ManagerDashboard from './components/ManagerDashboard';
 import Login from './components/Login';
 import './styles.css';
 
@@ -43,6 +45,14 @@ function DriverRoute({ children }) {
   return children;
 }
 
+// Nueva ruta para roles con acceso a funciones específicas
+function RoleRoute({ children, allowedRoles }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(user.role)) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 function AppLayout({ children }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -58,17 +68,63 @@ function AppLayout({ children }) {
 
 function AppRoutes() {
   const { user } = useAuth();
+
+  // Determinar ruta inicial según rol
+  const getHomeRoute = () => {
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'admin':
+        return '/dashboard';
+      case 'manager':
+        return '/manager';
+      case 'coordinator':
+        return '/coordinator';
+      case 'supervisor':
+        return '/dashboard';
+      case 'analyst':
+        return '/manager'; // Analistas ven el dashboard gerencial
+      case 'driver':
+        return '/driver';
+      default:
+        return '/dashboard';
+    }
+  };
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+
+      {/* Dashboard Supervisor (acceso: admin, supervisor, manager) */}
       <Route
         path="/dashboard"
         element={
-          <PrivateRoute>
+          <RoleRoute allowedRoles={['admin', 'supervisor', 'manager', 'analyst']}>
             <SupervisorDashboard />
-          </PrivateRoute>
+          </RoleRoute>
         }
       />
+
+      {/* Dashboard Gerencial (acceso: admin, manager, analyst) */}
+      <Route
+        path="/manager"
+        element={
+          <RoleRoute allowedRoles={['admin', 'manager', 'analyst']}>
+            <ManagerDashboard />
+          </RoleRoute>
+        }
+      />
+
+      {/* Dashboard Coordinador (acceso: admin, coordinator, manager) */}
+      <Route
+        path="/coordinator"
+        element={
+          <RoleRoute allowedRoles={['admin', 'coordinator', 'manager']}>
+            <CoordinatorDashboard />
+          </RoleRoute>
+        }
+      />
+
+      {/* Admin Motos */}
       <Route
         path="/admin"
         element={
@@ -77,6 +133,8 @@ function AppRoutes() {
           </AdminRoute>
         }
       />
+
+      {/* Gestión de Usuarios */}
       <Route
         path="/users"
         element={
@@ -85,14 +143,18 @@ function AppRoutes() {
           </AdminRoute>
         }
       />
+
+      {/* Perfil de Moto */}
       <Route
         path="/motos/:id"
         element={
-          <AdminRoute>
+          <RoleRoute allowedRoles={['admin', 'supervisor', 'manager']}>
             <MotoProfile />
-          </AdminRoute>
+          </RoleRoute>
         }
       />
+
+      {/* Driver Dashboard */}
       <Route
         path="/driver"
         element={
@@ -101,31 +163,31 @@ function AppRoutes() {
           </DriverRoute>
         }
       />
+
+      {/* Driver Shift Panel */}
       <Route
         path="/driver/shift"
         element={
           <DriverRoute>
-            <DriverShiftPanel 
-              driverId={user?.id} 
+            <DriverShiftPanel
+              driverId={user?.id}
               driverName={user?.name}
               branch={user?.branch}
             />
           </DriverRoute>
         }
       />
+
+      {/* Ruta raíz - redirige según rol */}
       <Route
         path="/"
-        element={
-          user ? (
-            user.role === 'driver' ? (
-              <Navigate to="/driver" replace />
-            ) : (
-              <Navigate to="/dashboard" replace />
-            )
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
+        element={<Navigate to={getHomeRoute()} replace />}
+      />
+
+      {/* Ruta 404 - redirige al home */}
+      <Route
+        path="*"
+        element={<Navigate to={getHomeRoute()} replace />}
       />
     </Routes>
   );

@@ -16,16 +16,40 @@ const Navbar = () => {
 
   const getNavLinks = () => {
     const links = [];
-    if (user?.role === 'admin' || user?.role === 'supervisor') {
-      links.push({ path: '/dashboard', label: 'Dashboard' });
+    const role = user?.role;
+
+    // Admin: acceso total
+    if (role === 'admin') {
+      links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
+      links.push({ path: '/manager', label: '📈 Gerencial', icon: '📈' });
+      links.push({ path: '/coordinator', label: '📋 Coordinador', icon: '📋' });
+      links.push({ path: '/admin', label: '🏍️ Motos', icon: '🏍️' });
+      links.push({ path: '/users', label: '👥 Usuarios', icon: '👥' });
     }
-    if (user?.role === 'admin') {
-      links.push({ path: '/admin', label: 'Admin Motos' });
-      links.push({ path: '/users', label: 'Gestión Usuarios' });
+    // Manager: vista gerencial + supervisor
+    else if (role === 'manager') {
+      links.push({ path: '/manager', label: '📈 Gerencial', icon: '📈' });
+      links.push({ path: '/dashboard', label: '📊 Operaciones', icon: '📊' });
+      links.push({ path: '/coordinator', label: '📋 Visitas', icon: '📋' });
     }
-    if (user?.role === 'driver') {
-      links.push({ path: '/driver', label: 'Mis Pedidos' });
+    // Coordinator: check-in y checklist
+    else if (role === 'coordinator') {
+      links.push({ path: '/coordinator', label: '📋 Mis Visitas', icon: '📋' });
     }
+    // Supervisor: operaciones
+    else if (role === 'supervisor') {
+      links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
+    }
+    // Analyst: reportes
+    else if (role === 'analyst') {
+      links.push({ path: '/manager', label: '📈 Métricas', icon: '📈' });
+      links.push({ path: '/dashboard', label: '📊 Operaciones', icon: '📊' });
+    }
+    // Driver: entregas
+    else if (role === 'driver') {
+      links.push({ path: '/driver', label: '📦 Mis Pedidos', icon: '📦' });
+    }
+
     return links;
   };
 

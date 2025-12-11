@@ -145,9 +145,21 @@ func main() {
 	r.POST("/optimization/apply", proxyTo(orderServiceURL, "/optimization/apply"))
 
 	// ========================================
-	// ✅ RUTAS DE KPIs
+	// ✅ RUTAS DE KPIs (Dashboard Gerencial)
 	// ========================================
 	r.GET("/kpis/motos", proxyTo(orderServiceURL, "/kpis/motos"))
+	r.GET("/kpis/branches", proxyTo(orderServiceURL, "/kpis/branches"))
+
+	// ========================================
+	// ✅ RUTAS DE COORDINADORES (Visitas y Checklist)
+	// ========================================
+	r.POST("/visits/check-in", proxyTo(orderServiceURL, "/visits/check-in"))
+	r.PUT("/visits/:id/check-out", proxyToWithNestedParam(orderServiceURL, "/visits", "/check-out"))
+	r.GET("/visits/active", proxyTo(orderServiceURL, "/visits/active"))
+	r.GET("/visits", proxyTo(orderServiceURL, "/visits"))
+	r.GET("/checklist/templates", proxyTo(orderServiceURL, "/checklist/templates"))
+	r.POST("/visits/:id/checklist", proxyToWithNestedParam(orderServiceURL, "/visits", "/checklist"))
+	r.GET("/visits/:id/checklist", proxyToWithNestedParam(orderServiceURL, "/visits", "/checklist"))
 
 	// ========================================
 	// ✅ RUTAS DE GEOLOCALIZACIÓN (wildcard)

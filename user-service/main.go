@@ -1,5 +1,6 @@
 package main
 
+// Version: 2.1.0 - December 2024 - Forced redeploy
 import (
 	"database/sql"
 	"log"

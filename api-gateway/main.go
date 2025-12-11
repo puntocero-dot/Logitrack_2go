@@ -1,5 +1,6 @@
 package main
 
+// Version: 2.1.0 - December 2024 - Forced redeploy with delivery-proof routes
 import (
 	"net/http"
 	"net/http/httputil"

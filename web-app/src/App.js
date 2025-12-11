@@ -11,6 +11,7 @@ import UsersManagement from './components/UsersManagement';
 import MotoProfile from './components/MotoProfile';
 import CoordinatorDashboard from './components/CoordinatorDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
+import MotoTransfers from './components/MotoTransfers';
 import Login from './components/Login';
 import './styles.css';
 
@@ -131,6 +132,16 @@ function AppRoutes() {
           <AdminRoute>
             <AdminMotos />
           </AdminRoute>
+        }
+      />
+
+      {/* Transferencias de Motos */}
+      <Route
+        path="/transfers"
+        element={
+          <RoleRoute allowedRoles={['admin', 'supervisor', 'manager']}>
+            <MotoTransfers />
+          </RoleRoute>
         }
       />
 

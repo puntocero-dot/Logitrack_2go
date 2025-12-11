@@ -23,6 +23,7 @@ const Navbar = () => {
       links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
       links.push({ path: '/manager', label: '📈 Gerencial', icon: '📈' });
       links.push({ path: '/coordinator', label: '📋 Coordinador', icon: '📋' });
+      links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
       links.push({ path: '/admin', label: '🏍️ Motos', icon: '🏍️' });
       links.push({ path: '/users', label: '👥 Usuarios', icon: '👥' });
     }
@@ -30,6 +31,7 @@ const Navbar = () => {
     else if (role === 'manager') {
       links.push({ path: '/manager', label: '📈 Gerencial', icon: '📈' });
       links.push({ path: '/dashboard', label: '📊 Operaciones', icon: '📊' });
+      links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
       links.push({ path: '/coordinator', label: '📋 Visitas', icon: '📋' });
     }
     // Coordinator: check-in y checklist
@@ -39,6 +41,7 @@ const Navbar = () => {
     // Supervisor: operaciones
     else if (role === 'supervisor') {
       links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
+      links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
     }
     // Analyst: reportes
     else if (role === 'analyst') {

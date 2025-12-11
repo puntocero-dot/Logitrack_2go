@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logitrack - Plan de Integraciones</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --bg-card: #1f2937;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            border-bottom: 2px solid var(--accent-green);
+            display: inline-block;
+            padding-bottom: 0.5rem;
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .diagram {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-green);
+            white-space: pre;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-card);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: var(--accent-yellow);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid var(--accent-blue);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+        }
+
+        .badge-green {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .badge-yellow {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-yellow);
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            color: white;
+            font-weight: bold;
+            margin-right: 0.75rem;
+        }
+
+        ul {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+
+        .nav {
+            position: fixed;
+            top: 50%;
+            right: 2rem;
+            transform: translateY(-50%);
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .nav a {
+            display: block;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            border-radius: 6px;
+        }
+
+        .nav a:hover {
+            background: var(--bg-card);
+            color: var(--accent-blue);
+        }
+
+        @media (max-width: 1400px) {
+            .nav {
+                display: none;
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            margin-top: 3rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="nav">
+        <a href="#metodos">Métodos</a>
+        <a href="#webhook">Webhook</a>
+        <a href="#api">API Polling</a>
+        <a href="#ejemplo">Ejemplos</a>
+        <a href="#seguridad">Seguridad</a>
+    </nav>
+
+    <div class="container">
+        <header>
+            <div class="logo">🔌 LOGITRACK</div>
+            <h1>Plan de Integraciones</h1>
+            <p style="color: var(--text-secondary);">Conecta tu sistema con Logitrack para automatizar entregas</p>
+        </header>
+
+        <!-- VISIÓN GENERAL -->
+        <section class="section">
+            <h2>📊 Visión General</h2>
+            <p style="color: var(--text-secondary);">Logitrack ofrece múltiples formas de conectar tu sistema de
+                pedidos:</p>
+
+            <div class="grid">
+                <div class="card">
+                    <div class="card-icon">📡</div>
+                    <h4>Webhook (Push)</h4>
+                    <p style="color: var(--text-secondary);">Tu sistema nos envía pedidos en tiempo real cuando se
+                        crean.</p>
+                    <span class="badge badge-green">Recomendado</span>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🔄</div>
+                    <h4>API Polling (Pull)</h4>
+                    <p style="color: var(--text-secondary);">Logitrack consulta tu API periódicamente buscando nuevos
+                        pedidos.</p>
+                    <span class="badge badge-yellow">Automático</span>
+                </div>
+                <div class="card">
+                    <div class="card-icon">📦</div>
+                    <h4>Importación Masiva</h4>
+                    <p style="color: var(--text-secondary);">Sube múltiples pedidos de una vez vía API o archivo.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- WEBHOOK -->
+        <section class="section" id="webhook">
+            <h2>📡 Opción 1: Webhook (Recomendado)</h2>
+
+            <div class="highlight">
+                <strong>¿Cómo funciona?</strong> Tu sistema envía un POST a nuestra URL cada vez que se crea un pedido
+                nuevo. Nosotros lo procesamos inmediatamente.
+            </div>
+
+            <h4><span class="step-number">1</span> Endpoint</h4>
+            <div class="diagram">
+                <pre>
+POST https://api.logitrack.app/webhook/{nombre_integracion}
+
+Headers:
+  Content-Type: application/json
+  X-API-Key: tu_secreto_compartido
+</pre>
+            </div>
+
+            <h4><span class="step-number">2</span> Payload</h4>
+            <div class="diagram">
+                <pre>
+{
+  "external_id": "ORD-12345",          // Tu ID de pedido (requerido)
+  "client_name": "Juan Pérez",          // Nombre del cliente (requerido)
+  "address": "Zona 10, Guatemala",      // Dirección (requerido)
+  "latitude": 14.5900,                  // Coordenadas (opcional)
+  "longitude": -90.5200,
+  "client_phone": "+502 5555-1234",     // Teléfono (opcional)
+  "notes": "Entregar en recepción",     // Notas (opcional)
+  "priority": 1,                        // 1-5, mayor = más urgente
+  "branch": "central"                   // Sucursal que procesa
+}
+</pre>
+            </div>
+
+            <h4><span class="step-number">3</span> Respuesta</h4>
+            <div class="diagram">
+                <pre>
+// Éxito (200)
+{
+  "total_received": 1,
+  "created": 1,
+  "updated": 0,
+  "errors": 0
+}
+
+// Error (400)
+{
+  "error": "Campo 'address' es requerido"
+}
+</pre>
+            </div>
+        </section>
+
+        <!-- API POLLING -->
+        <section class="section" id="api">
+            <h2>🔄 Opción 2: API Polling</h2>
+
+            <div class="highlight">
+                <strong>¿Cómo funciona?</strong> Configuramos Logitrack para consultar tu API cada X minutos y traer
+                pedidos nuevos automáticamente.
+            </div>
+
+            <h4>Configuración</h4>
+            <div class="diagram">
+                <pre>
+POST /integrations
+{
+  "name": "mi_tienda",
+  "type": "api",
+  "endpoint": "https://api.mi-tienda.com/orders?status=pending",
+  "auth_type": "bearer",
+  "auth_value": "sk_live_xxxxx",
+  "poll_interval_seconds": 300
+}
+</pre>
+            </div>
+
+            <h4>Tu API debe responder:</h4>
+            <div class="diagram">
+                <pre>
+// Logitrack espera este formato:
+[
+  {
+    "external_id": "ORD-001",
+    "client_name": "María García",
+    "address": "Zona 15, Guatemala"
+  },
+  {
+    "external_id": "ORD-002",
+    "client_name": "Carlos López",
+    "address": "Zona 1, Guatemala"
+  }
+]
+</pre>
+            </div>
+        </section>
+
+        <!-- CALLBACKS -->
+        <section class="section" id="callbacks">
+            <h2>🔔 Callbacks (Notificaciones)</h2>
+
+            <p style="color: var(--text-secondary);">Logitrack puede notificarte cuando cambia el estado de un pedido:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Evento</th>
+                        <th>Descripción</th>
+                        <th>Datos Incluidos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>assigned</code></td>
+                        <td>Motorista asignado</td>
+                        <td>moto_plate, driver_name, eta_minutes</td>
+                    </tr>
+                    <tr>
+                        <td><code>in_route</code></td>
+                        <td>En camino</td>
+                        <td>current_latitude, current_longitude</td>
+                    </tr>
+                    <tr>
+                        <td><code>delivered</code></td>
+                        <td>Entregado</td>
+                        <td>delivered_at, signature_url, photo_url</td>
+                    </tr>
+                    <tr>
+                        <td><code>cancelled</code></td>
+                        <td>Cancelado</td>
+                        <td>reason, cancelled_by</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>Ejemplo de Callback</h4>
+            <div class="diagram">
+                <pre>
+// Logitrack envía a tu callback_url:
+POST https://tu-sistema.com/logitrack/updates
+
+{
+  "event": "delivered",
+  "timestamp": "2024-01-15T15:30:00Z",
+  "order_id": 1234,
+  "external_id": "ORD-12345",
+  "status": "delivered",
+  "data": {
+    "delivered_at": "2024-01-15T15:28:00Z",
+    "signature_url": "https://...",
+    "photo_url": "https://..."
+  }
+}
+</pre>
+            </div>
+        </section>
+
+        <!-- SEGURIDAD -->
+        <section class="section" id="seguridad">
+            <h2>🔐 Seguridad</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Método</th>
+                        <th>Header</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>API Key</td>
+                        <td><code>X-API-Key: tu_secreto</code></td>
+                        <td>Simple y efectivo</td>
+                    </tr>
+                    <tr>
+                        <td>Bearer Token</td>
+                        <td><code>Authorization: Bearer token</code></td>
+                        <td>Estándar OAuth</td>
+                    </tr>
+                    <tr>
+                        <td>HMAC Signature</td>
+                        <td><code>X-Logitrack-Signature</code></td>
+                        <td>Para verificar integridad</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- PASOS -->
+        <section class="section">
+            <h2>🚀 Pasos para Integrarte</h2>
+
+            <div style="display: grid; gap: 1rem;">
+                <div class="card" style="display: flex; align-items: flex-start; gap: 1rem;">
+                    <span class="step-number">1</span>
+                    <div>
+                        <h4 style="margin-top: 0;">Contáctanos</h4>
+                        <p style="color: var(--text-secondary);">Cuéntanos cómo funciona tu sistema de pedidos.</p>
+                    </div>
+                </div>
+                <div class="card" style="display: flex; align-items: flex-start; gap: 1rem;">
+                    <span class="step-number">2</span>
+                    <div>
+                        <h4 style="margin-top: 0;">Configuramos la Integración</h4>
+                        <p style="color: var(--text-secondary);">Creamos tu endpoint de webhook o configuramos el
+                            polling.</p>
+                    </div>
+                </div>
+                <div class="card" style="display: flex; align-items: flex-start; gap: 1rem;">
+                    <span class="step-number">3</span>
+                    <div>
+                        <h4 style="margin-top: 0;">Pruebas en Sandbox</h4>
+                        <p style="color: var(--text-secondary);">Enviamos pedidos de prueba para verificar el flujo.</p>
+                    </div>
+                </div>
+                <div class="card" style="display: flex; align-items: flex-start; gap: 1rem;">
+                    <span class="step-number">4</span>
+                    <div>
+                        <h4 style="margin-top: 0;">Go Live!</h4>
+                        <p style="color: var(--text-secondary);">Activamos la integración en producción.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>📧 integraciones@logitrack.app</p>
+            <p>📄 <a href="arquitectura.html" style="color: var(--accent-blue);">Ver Arquitectura del Sistema</a></p>
+        </footer>
+    </div>
+</body>
+
+</html>

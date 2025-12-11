@@ -46,26 +46,38 @@ func seedUsers() {
 	// Hash passwords before inserting. Use enviroment variable or default for dev only.
 	defaultPass := os.Getenv("SEED_USER_PASSWORD")
 	if defaultPass == "" {
-		defaultPass = "dev_password_do_not_use_in_prod"
+		defaultPass = "admin123" // Default password for development
 	}
 
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
 
+	log.Printf("🌱 Seeding users with password hash...")
+
+	// First, ensure admin@logitrack.com has 'admin' role (force update)
 	_, err := db.Exec(`
 		INSERT INTO users (email, password_hash, role) VALUES
 		('admin@logitrack.com', $1, 'admin'),
 		('supervisor@logitrack.com', $1, 'supervisor'),
-		('operator@logitrack.com', $1, 'operator'),
-		('driver@logitrack.com', $1, 'driver'),
-		('client@logitrack.com', $1, 'client')
+		('manager@logitrack.com', $1, 'manager'),
+		('coordinator@logitrack.com', $1, 'coordinator'),
+		('analyst@logitrack.com', $1, 'analyst'),
+		('driver@logitrack.com', $1, 'driver')
 		ON CONFLICT (email) DO UPDATE SET
 			password_hash = EXCLUDED.password_hash,
 			role = EXCLUDED.role
 	`, passwordHash)
 	if err != nil {
-		log.Println("failed to seed users:", err)
+		log.Println("⚠️ Failed to seed users:", err)
 	} else {
-		log.Println("Users seeded successfully")
+		log.Println("✅ Users seeded successfully")
+	}
+
+	// Force admin role for admin@logitrack.com (in case it was changed)
+	_, err = db.Exec(`UPDATE users SET role = 'admin' WHERE email = 'admin@logitrack.com'`)
+	if err != nil {
+		log.Println("⚠️ Failed to update admin role:", err)
+	} else {
+		log.Println("✅ Admin role enforced for admin@logitrack.com")
 	}
 }
 

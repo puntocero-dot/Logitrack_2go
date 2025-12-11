@@ -47,7 +47,9 @@ const Navbar = () => {
     else if (role === 'supervisor') {
       links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
       links.push({ path: '/map', label: '🗺️ Mapa', icon: '🗺️' });
+      links.push({ path: '/analytics', label: '📉 Analytics', icon: '📉' });
       links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
+      links.push({ path: '/docs/', label: '📄 Docs', icon: '📄', external: true });
     }
     // Analyst: reportes
     else if (role === 'analyst') {

@@ -26,11 +26,12 @@ func initDB() {
 }
 
 func seedMotos() {
-	_, err := db.Exec("INSERT INTO motos (license_plate, status) VALUES " +
-		"('MOTO-001', 'available'), " +
-		"('MOTO-002', 'available'), " +
-		"('MOTO-003', 'available') " +
-		"ON CONFLICT (license_plate) DO NOTHING")
+	// Seed motos con ubicación inicial (Guatemala Ciudad)
+	_, err := db.Exec(`INSERT INTO motos (license_plate, status, latitude, longitude, max_orders_capacity, current_orders_count, branch_id) VALUES 
+		('MOTO-001', 'available', 14.6349, -90.5069, 5, 0, 1),
+		('MOTO-002', 'available', 14.6400, -90.5100, 5, 0, 1),
+		('MOTO-003', 'available', 14.6300, -90.5000, 5, 0, 1)
+		ON CONFLICT (license_plate) DO NOTHING`)
 	if err != nil {
 		log.Println("failed to seed motos:", err)
 	}
@@ -50,18 +51,29 @@ func main() {
 	r.Use(middleware.RequestIDMiddleware())
 	r.Use(middleware.MetricsMiddleware())
 
+	// Orders
 	r.POST("/orders", handlers.CreateOrder)
 	r.GET("/orders", handlers.GetOrders)
 	r.GET("/orders/:id", handlers.GetOrderByID)
 	r.GET("/orders/:id/eta", handlers.GetOrderETA)
+	r.PUT("/orders/:id/status", handlers.UpdateOrderStatus)
+	r.PUT("/orders/:id/assign", handlers.AssignOrderToMoto)
+
+	// Motos
 	r.GET("/motos", handlers.GetMotos)
 	r.GET("/motos/:id", handlers.GetMotoByID)
 	r.POST("/motos", handlers.CreateMoto)
 	r.PUT("/motos/:id", handlers.UpdateMoto)
 	r.PUT("/motos/:id/status", handlers.UpdateMotoStatus)
+	r.PUT("/motos/:id/location", handlers.UpdateMotoLocation) // Nueva ruta
 	r.DELETE("/motos/:id", handlers.DeleteMoto)
-	r.PUT("/orders/:id/status", handlers.UpdateOrderStatus)
-	r.PUT("/orders/:id/assign", handlers.AssignOrderToMoto)
+	r.GET("/motos/available", handlers.GetMotosAvailableForAssignment) // Nueva ruta
+
+	// Branches (Sucursales)
+	r.GET("/branches", handlers.GetBranches)
+	r.POST("/branches", handlers.CreateBranch)
+
+	// Optimization & KPIs
 	r.GET("/optimization/assignments", handlers.OptimizeAssignments)
 	r.POST("/optimization/apply", handlers.ApplyOptimizedAssignments)
 	r.GET("/kpis/motos", handlers.GetMotosKPIs)

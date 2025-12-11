@@ -124,10 +124,19 @@ func main() {
 	// ✅ RUTAS DE MOTOS
 	// ========================================
 	r.GET("/motos", proxyTo(orderServiceURL, "/motos"))
+	r.GET("/motos/available", proxyTo(orderServiceURL, "/motos/available"))
 	r.GET("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
 	r.POST("/motos", proxyTo(orderServiceURL, "/motos"))
 	r.PUT("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
+	r.PUT("/motos/:id/location", proxyToWithNestedParam(orderServiceURL, "/motos", "/location"))
+	r.PUT("/motos/:id/status", proxyToWithNestedParam(orderServiceURL, "/motos", "/status"))
 	r.DELETE("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
+
+	// ========================================
+	// ✅ RUTAS DE SUCURSALES (BRANCHES)
+	// ========================================
+	r.GET("/branches", proxyTo(orderServiceURL, "/branches"))
+	r.POST("/branches", proxyTo(orderServiceURL, "/branches"))
 
 	// ========================================
 	// ✅ RUTAS DE OPTIMIZACIÓN

@@ -9,8 +9,32 @@ import (
 	"github.com/logitrack/order-service/models"
 )
 
+// ========================================
+// MOTOS HANDLERS (Actualizado con ubicación)
+// ========================================
+
 func GetMotos(c *gin.Context) {
-	rows, err := db.Query("SELECT id, license_plate, driver_id, status FROM motos")
+	branchID := c.Query("branch_id")
+	status := c.Query("status")
+
+	query := `SELECT id, license_plate, driver_id, branch_id, status, 
+	          latitude, longitude, max_orders_capacity, current_orders_count 
+	          FROM motos WHERE 1=1`
+	args := []interface{}{}
+	argCount := 0
+
+	if branchID != "" {
+		argCount++
+		query += " AND branch_id = $" + strconv.Itoa(argCount)
+		args = append(args, branchID)
+	}
+	if status != "" {
+		argCount++
+		query += " AND status = $" + strconv.Itoa(argCount)
+		args = append(args, status)
+	}
+
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -20,15 +44,25 @@ func GetMotos(c *gin.Context) {
 	var motos []models.Moto
 	for rows.Next() {
 		var m models.Moto
-		var driverID sql.NullInt64
-		if err := rows.Scan(&m.ID, &m.LicensePlate, &driverID, &m.Status); err != nil {
+		var driverID, branchID sql.NullInt64
+		var lat, lng sql.NullFloat64
+		if err := rows.Scan(&m.ID, &m.LicensePlate, &driverID, &branchID, &m.Status,
+			&lat, &lng, &m.MaxOrdersCapacity, &m.CurrentOrdersCount); err != nil {
 			continue
 		}
 		if driverID.Valid {
 			v := int(driverID.Int64)
 			m.DriverID = &v
-		} else {
-			m.DriverID = nil
+		}
+		if branchID.Valid {
+			v := int(branchID.Int64)
+			m.BranchID = &v
+		}
+		if lat.Valid {
+			m.Latitude = &lat.Float64
+		}
+		if lng.Valid {
+			m.Longitude = &lng.Float64
 		}
 		motos = append(motos, m)
 	}
@@ -44,9 +78,13 @@ func GetMotoByID(c *gin.Context) {
 	}
 
 	var m models.Moto
-	var driverID sql.NullInt64
-	err = db.QueryRow("SELECT id, license_plate, driver_id, status FROM motos WHERE id = $1", id).
-		Scan(&m.ID, &m.LicensePlate, &driverID, &m.Status)
+	var driverID, branchID sql.NullInt64
+	var lat, lng sql.NullFloat64
+	err = db.QueryRow(`SELECT id, license_plate, driver_id, branch_id, status, 
+	                   latitude, longitude, max_orders_capacity, current_orders_count 
+	                   FROM motos WHERE id = $1`, id).
+		Scan(&m.ID, &m.LicensePlate, &driverID, &branchID, &m.Status,
+			&lat, &lng, &m.MaxOrdersCapacity, &m.CurrentOrdersCount)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Moto not found"})
 		return
@@ -58,34 +96,74 @@ func GetMotoByID(c *gin.Context) {
 	if driverID.Valid {
 		v := int(driverID.Int64)
 		m.DriverID = &v
-	} else {
-		m.DriverID = nil
+	}
+	if branchID.Valid {
+		v := int(branchID.Int64)
+		m.BranchID = &v
+	}
+	if lat.Valid {
+		m.Latitude = &lat.Float64
+	}
+	if lng.Valid {
+		m.Longitude = &lng.Float64
 	}
 
 	c.JSON(http.StatusOK, m)
 }
 
+type CreateMotoRequest struct {
+	LicensePlate      string   `json:"license_plate" binding:"required"`
+	DriverID          *int     `json:"driver_id"`
+	BranchID          *int     `json:"branch_id"`
+	Status            string   `json:"status"`
+	Latitude          *float64 `json:"latitude"`
+	Longitude         *float64 `json:"longitude"`
+	MaxOrdersCapacity int      `json:"max_orders_capacity"`
+}
+
 func CreateMoto(c *gin.Context) {
-	var m models.Moto
-	if err := c.ShouldBindJSON(&m); err != nil {
+	var req CreateMotoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if m.LicensePlate == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "license_plate is required"})
-		return
+	if req.Status == "" {
+		req.Status = "available"
 	}
-	if m.Status == "" {
-		m.Status = "available"
+	if req.MaxOrdersCapacity <= 0 {
+		req.MaxOrdersCapacity = 5
 	}
-	err := db.QueryRow("INSERT INTO motos (license_plate, driver_id, status) VALUES ($1, $2, $3) RETURNING id",
-		m.LicensePlate, m.DriverID, m.Status,
+
+	var m models.Moto
+	err := db.QueryRow(`INSERT INTO motos (license_plate, driver_id, branch_id, status, latitude, longitude, max_orders_capacity, current_orders_count) 
+	                    VALUES ($1, $2, $3, $4, $5, $6, $7, 0) RETURNING id`,
+		req.LicensePlate, req.DriverID, req.BranchID, req.Status, req.Latitude, req.Longitude, req.MaxOrdersCapacity,
 	).Scan(&m.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create moto"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create moto: " + err.Error()})
 		return
 	}
+
+	m.LicensePlate = req.LicensePlate
+	m.DriverID = req.DriverID
+	m.BranchID = req.BranchID
+	m.Status = req.Status
+	m.Latitude = req.Latitude
+	m.Longitude = req.Longitude
+	m.MaxOrdersCapacity = req.MaxOrdersCapacity
+	m.CurrentOrdersCount = 0
+
 	c.JSON(http.StatusCreated, m)
+}
+
+type UpdateMotoRequest struct {
+	LicensePlate      *string  `json:"license_plate"`
+	DriverID          *int     `json:"driver_id"`
+	BranchID          *int     `json:"branch_id"`
+	Status            *string  `json:"status"`
+	Latitude          *float64 `json:"latitude"`
+	Longitude         *float64 `json:"longitude"`
+	MaxOrdersCapacity *int     `json:"max_orders_capacity"`
 }
 
 func UpdateMoto(c *gin.Context) {
@@ -94,18 +172,69 @@ func UpdateMoto(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid moto id"})
 		return
 	}
-	var payload struct {
-		LicensePlate string `json:"license_plate"`
-	}
-	if err := c.ShouldBindJSON(&payload); err != nil {
+	var req UpdateMotoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if payload.LicensePlate == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "license_plate is required"})
+
+	// Construir query dinámico solo con campos presentes
+	updates := []string{}
+	args := []interface{}{}
+	argNum := 1
+
+	if req.LicensePlate != nil {
+		updates = append(updates, "license_plate = $"+strconv.Itoa(argNum))
+		args = append(args, *req.LicensePlate)
+		argNum++
+	}
+	if req.DriverID != nil {
+		updates = append(updates, "driver_id = $"+strconv.Itoa(argNum))
+		args = append(args, *req.DriverID)
+		argNum++
+	}
+	if req.BranchID != nil {
+		updates = append(updates, "branch_id = $"+strconv.Itoa(argNum))
+		args = append(args, *req.BranchID)
+		argNum++
+	}
+	if req.Status != nil {
+		updates = append(updates, "status = $"+strconv.Itoa(argNum))
+		args = append(args, *req.Status)
+		argNum++
+	}
+	if req.Latitude != nil {
+		updates = append(updates, "latitude = $"+strconv.Itoa(argNum))
+		args = append(args, *req.Latitude)
+		argNum++
+	}
+	if req.Longitude != nil {
+		updates = append(updates, "longitude = $"+strconv.Itoa(argNum))
+		args = append(args, *req.Longitude)
+		argNum++
+	}
+	if req.MaxOrdersCapacity != nil {
+		updates = append(updates, "max_orders_capacity = $"+strconv.Itoa(argNum))
+		args = append(args, *req.MaxOrdersCapacity)
+		argNum++
+	}
+
+	if len(updates) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No fields to update"})
 		return
 	}
-	res, err := db.Exec("UPDATE motos SET license_plate = $1 WHERE id = $2", payload.LicensePlate, id)
+
+	query := "UPDATE motos SET "
+	for i, u := range updates {
+		if i > 0 {
+			query += ", "
+		}
+		query += u
+	}
+	query += " WHERE id = $" + strconv.Itoa(argNum)
+	args = append(args, id)
+
+	res, err := db.Exec(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update moto"})
 		return
@@ -142,6 +271,36 @@ func UpdateMotoStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Moto status updated"})
 }
 
+// UpdateMotoLocation actualiza la ubicación GPS de una moto en tiempo real
+func UpdateMotoLocation(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid moto id"})
+		return
+	}
+	var req struct {
+		Latitude  float64 `json:"latitude" binding:"required"`
+		Longitude float64 `json:"longitude" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	res, err := db.Exec(`UPDATE motos SET latitude = $1, longitude = $2, last_location_update = CURRENT_TIMESTAMP WHERE id = $3`,
+		req.Latitude, req.Longitude, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update moto location"})
+		return
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Moto not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Location updated"})
+}
+
 func DeleteMoto(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -160,4 +319,109 @@ func DeleteMoto(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Moto deleted"})
+}
+
+// ========================================
+// BRANCHES HANDLERS (Nuevo)
+// ========================================
+
+func GetBranches(c *gin.Context) {
+	rows, err := db.Query(`SELECT id, name, code, address, latitude, longitude, radius_km, is_active FROM branches WHERE is_active = true`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var branches []models.Branch
+	for rows.Next() {
+		var b models.Branch
+		if err := rows.Scan(&b.ID, &b.Name, &b.Code, &b.Address, &b.Latitude, &b.Longitude, &b.RadiusKm, &b.IsActive); err != nil {
+			continue
+		}
+		branches = append(branches, b)
+	}
+
+	c.JSON(http.StatusOK, branches)
+}
+
+func CreateBranch(c *gin.Context) {
+	var b models.Branch
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if b.Name == "" || b.Code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name and code are required"})
+		return
+	}
+	if b.RadiusKm <= 0 {
+		b.RadiusKm = 10.0
+	}
+	b.IsActive = true
+
+	err := db.QueryRow(`INSERT INTO branches (name, code, address, latitude, longitude, radius_km, is_active) 
+	                    VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+		b.Name, b.Code, b.Address, b.Latitude, b.Longitude, b.RadiusKm, b.IsActive,
+	).Scan(&b.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create branch: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, b)
+}
+
+// GetMotosAvailableForAssignment devuelve motos disponibles con capacidad
+func GetMotosAvailableForAssignment(c *gin.Context) {
+	branchID := c.Query("branch_id")
+
+	query := `SELECT id, license_plate, driver_id, branch_id, status, 
+	          latitude, longitude, max_orders_capacity, current_orders_count 
+	          FROM motos 
+	          WHERE status = 'available' 
+	          AND current_orders_count < max_orders_capacity`
+	args := []interface{}{}
+
+	if branchID != "" {
+		query += " AND branch_id = $1"
+		args = append(args, branchID)
+	}
+
+	query += " ORDER BY current_orders_count ASC" // Priorizar motos con menos carga
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var motos []models.Moto
+	for rows.Next() {
+		var m models.Moto
+		var driverID, branchID sql.NullInt64
+		var lat, lng sql.NullFloat64
+		if err := rows.Scan(&m.ID, &m.LicensePlate, &driverID, &branchID, &m.Status,
+			&lat, &lng, &m.MaxOrdersCapacity, &m.CurrentOrdersCount); err != nil {
+			continue
+		}
+		if driverID.Valid {
+			v := int(driverID.Int64)
+			m.DriverID = &v
+		}
+		if branchID.Valid {
+			v := int(branchID.Int64)
+			m.BranchID = &v
+		}
+		if lat.Valid {
+			m.Latitude = &lat.Float64
+		}
+		if lng.Valid {
+			m.Longitude = &lng.Float64
+		}
+		motos = append(motos, m)
+	}
+
+	c.JSON(http.StatusOK, motos)
 }

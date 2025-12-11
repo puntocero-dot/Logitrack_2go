@@ -13,13 +13,51 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_branch ON users(branch);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
+-- ============================================
+-- SUCURSALES / BRANCHES (Nueva Entidad)
+-- ============================================
+CREATE TABLE IF NOT EXISTS branches (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    code VARCHAR(50) UNIQUE NOT NULL,  -- 'central', 'zona_a', 'norte', etc.
+    address TEXT,
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL,
+    radius_km DECIMAL(5, 2) DEFAULT 10.0,  -- Radio de cobertura en km
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_branches_code ON branches(code);
+CREATE INDEX IF NOT EXISTS idx_branches_active ON branches(is_active);
+
+-- Insertar sucursales por defecto (Guatemala Ciudad como ejemplo)
+INSERT INTO branches (name, code, address, latitude, longitude, radius_km) VALUES
+    ('Central', 'central', 'Zona 1, Guatemala Ciudad', 14.6349, -90.5069, 15.0),
+    ('Zona Norte', 'norte', 'Zona 18, Guatemala Ciudad', 14.6800, -90.4800, 10.0),
+    ('Zona Sur', 'sur', 'Zona 12, Guatemala Ciudad', 14.5900, -90.5200, 10.0)
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================
+-- MOTOS (Actualizada con ubicación)
+-- ============================================
 CREATE TABLE IF NOT EXISTS motos (
     id SERIAL PRIMARY KEY,
     license_plate VARCHAR(50) UNIQUE NOT NULL,
     driver_id INTEGER REFERENCES users(id),
+    branch_id INTEGER REFERENCES branches(id),
     status VARCHAR(50) DEFAULT 'available' CHECK (status IN ('available', 'in_route', 'maintenance')),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    last_location_update TIMESTAMP,
+    max_orders_capacity INTEGER DEFAULT 5,  -- Máximo de pedidos simultáneos
+    current_orders_count INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_motos_branch ON motos(branch_id);
+CREATE INDEX IF NOT EXISTS idx_motos_status ON motos(status);
 
 CREATE TABLE IF NOT EXISTS orders (
     id SERIAL PRIMARY KEY,

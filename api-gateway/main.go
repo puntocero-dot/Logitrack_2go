@@ -120,6 +120,8 @@ func main() {
 	r.PUT("/orders/:id/status", proxyToWithNestedParam(orderServiceURL, "/orders", "/status"))
 	r.PUT("/orders/:id/assign", proxyToWithNestedParam(orderServiceURL, "/orders", "/assign"))
 	r.GET("/orders/:id/eta", proxyToWithNestedParam(orderServiceURL, "/orders", "/eta"))
+	r.POST("/orders/:id/delivery-proof", proxyToWithNestedParam(orderServiceURL, "/orders", "/delivery-proof"))
+	r.GET("/orders/:id/delivery-proof", proxyToWithNestedParam(orderServiceURL, "/orders", "/delivery-proof"))
 
 	// ========================================
 	// ✅ RUTAS DE MOTOS

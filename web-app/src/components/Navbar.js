@@ -21,6 +21,8 @@ const Navbar = () => {
     // Admin: acceso total
     if (role === 'admin') {
       links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
+      links.push({ path: '/map', label: '🗺️ Mapa', icon: '🗺️' });
+      links.push({ path: '/analytics', label: '📉 Analytics', icon: '📉' });
       links.push({ path: '/manager', label: '📈 Gerencial', icon: '📈' });
       links.push({ path: '/coordinator', label: '📋 Coordinador', icon: '📋' });
       links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
@@ -30,6 +32,8 @@ const Navbar = () => {
     // Manager: vista gerencial + supervisor
     else if (role === 'manager') {
       links.push({ path: '/manager', label: '📈 Gerencial', icon: '📈' });
+      links.push({ path: '/analytics', label: '📉 Analytics', icon: '📉' });
+      links.push({ path: '/map', label: '🗺️ Mapa', icon: '🗺️' });
       links.push({ path: '/dashboard', label: '📊 Operaciones', icon: '📊' });
       links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
       links.push({ path: '/coordinator', label: '📋 Visitas', icon: '📋' });
@@ -41,11 +45,14 @@ const Navbar = () => {
     // Supervisor: operaciones
     else if (role === 'supervisor') {
       links.push({ path: '/dashboard', label: '📊 Dashboard', icon: '📊' });
+      links.push({ path: '/map', label: '🗺️ Mapa', icon: '🗺️' });
       links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
     }
     // Analyst: reportes
     else if (role === 'analyst') {
+      links.push({ path: '/analytics', label: '📉 Analytics', icon: '📉' });
       links.push({ path: '/manager', label: '📈 Métricas', icon: '📈' });
+      links.push({ path: '/map', label: '🗺️ Mapa', icon: '🗺️' });
       links.push({ path: '/dashboard', label: '📊 Operaciones', icon: '📊' });
     }
     // Driver: entregas

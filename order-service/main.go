@@ -97,6 +97,10 @@ func main() {
 	r.GET("/transfers/history", handlers.GetTransferHistory)
 	r.POST("/transfers/expire", handlers.ExpireTransfers) // Cron job endpoint
 
+	// Prueba de Entrega (firma + foto)
+	r.POST("/orders/:id/delivery-proof", handlers.SaveDeliveryProof)
+	r.GET("/orders/:id/delivery-proof", handlers.GetDeliveryProof)
+
 	// Endpoint de métricas Prometheus
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 

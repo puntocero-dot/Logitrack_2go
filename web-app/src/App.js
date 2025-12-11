@@ -12,6 +12,8 @@ import MotoProfile from './components/MotoProfile';
 import CoordinatorDashboard from './components/CoordinatorDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import MotoTransfers from './components/MotoTransfers';
+import LiveMap from './components/LiveMap';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import Login from './components/Login';
 import './styles.css';
 
@@ -141,6 +143,26 @@ function AppRoutes() {
         element={
           <RoleRoute allowedRoles={['admin', 'supervisor', 'manager']}>
             <MotoTransfers />
+          </RoleRoute>
+        }
+      />
+
+      {/* Mapa en Vivo */}
+      <Route
+        path="/map"
+        element={
+          <RoleRoute allowedRoles={['admin', 'supervisor', 'manager', 'analyst']}>
+            <LiveMap />
+          </RoleRoute>
+        }
+      />
+
+      {/* Analytics Dashboard */}
+      <Route
+        path="/analytics"
+        element={
+          <RoleRoute allowedRoles={['admin', 'manager', 'analyst']}>
+            <AnalyticsDashboard />
           </RoleRoute>
         }
       />

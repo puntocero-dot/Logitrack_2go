@@ -28,6 +28,7 @@ const Navbar = () => {
       links.push({ path: '/transfers', label: '🔄 Transferencias', icon: '🔄' });
       links.push({ path: '/admin', label: '🏍️ Motos', icon: '🏍️' });
       links.push({ path: '/users', label: '👥 Usuarios', icon: '👥' });
+      links.push({ path: '/docs/', label: '📄 Docs', icon: '📄', external: true });
     }
     // Manager: vista gerencial + supervisor
     else if (role === 'manager') {
@@ -72,13 +73,25 @@ const Navbar = () => {
 
         <div className="navbar-menu">
           {getNavLinks().map(link => (
-            <button
-              key={link.path}
-              className={`nav-link ${isActive(link.path) ? 'active' : ''}`}
-              onClick={() => navigate(link.path)}
-            >
-              {link.label}
-            </button>
+            link.external ? (
+              <a
+                key={link.path}
+                href={link.path}
+                className="nav-link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {link.label}
+              </a>
+            ) : (
+              <button
+                key={link.path}
+                className={`nav-link ${isActive(link.path) ? 'active' : ''}`}
+                onClick={() => navigate(link.path)}
+              >
+                {link.label}
+              </button>
+            )
           ))}
         </div>
 

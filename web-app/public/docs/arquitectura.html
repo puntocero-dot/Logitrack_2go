@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logitrack - Arquitectura del Sistema</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --bg-card: #1f2937;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --border-color: rgba(255,255,255,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--text-primary);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { 
+            font-size: 1.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent-blue);
+            display: inline-block;
+        }
+        h3 { font-size: 1.35rem; color: var(--accent-green); }
+        h4 { font-size: 1.15rem; color: var(--text-secondary); }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .diagram {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--accent-green);
+            white-space: pre;
+            margin: 0;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-card);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: var(--accent-yellow);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--accent-blue);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-green { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .badge-yellow { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+        .badge-red { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .badge-blue { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+
+        .role-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .role-card h4 {
+            margin-top: 0;
+            color: var(--text-primary);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .card h4 {
+            margin-top: 0;
+            color: var(--text-primary);
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid var(--accent-blue);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        ul {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+
+        .toc {
+            position: fixed;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            max-width: 200px;
+        }
+
+        .toc a {
+            display: block;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .toc a:hover {
+            background: var(--bg-card);
+            color: var(--accent-blue);
+        }
+
+        @media (max-width: 1400px) {
+            .toc { display: none; }
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            margin-top: 3rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .emoji {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="toc">
+        <a href="#vision">Visión General</a>
+        <a href="#sucursales">Modelo Sucursales</a>
+        <a href="#jerarquia">Jerarquía</a>
+        <a href="#transferencias">Transferencias</a>
+        <a href="#datos">Modelo de Datos</a>
+        <a href="#seguridad">Seguridad</a>
+    </nav>
+
+    <div class="container">
+        <header>
+            <div class="logo">🏗️ LOGITRACK</div>
+            <p class="subtitle">Arquitectura del Sistema de Gestión de Entregas</p>
+        </header>
+
+        <!-- VISIÓN GENERAL -->
+        <section class="section" id="vision">
+            <h2><span class="emoji">📊</span>Visión General</h2>
+            
+            <div class="diagram">
+<pre>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           LOGITRACK PLATFORM                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+│  │  Web App    │  │ Client View │  │ Coord App   │  │ Driver App  │   │
+│  │  (React)    │  │  (React)    │  │  (React)    │  │  (React)    │   │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘   │
+│         │                │                │                │           │
+│         └────────────────┴────────────────┴────────────────┘           │
+│                                   │                                     │
+│                          ┌────────▼────────┐                           │
+│                          │   API Gateway   │ ← Rate Limiting, CORS     │
+│                          │   (Go + Gin)    │   Auth, Logging           │
+│                          └────────┬────────┘                           │
+│                                   │                                     │
+│    ┌──────────────────────────────┼──────────────────────────────┐     │
+│    │                              │                              │     │
+│  ┌─▼────────┐  ┌─────────────────▼─────────────────┐  ┌─────────▼──┐  │
+│  │  User    │  │         Order Service             │  │Integration │  │
+│  │ Service  │  │  • Orders  • Motos  • Branches    │  │  Service   │  │
+│  │  (Go)    │  │  • Routes  • KPIs  • Visits       │  │   (Go)     │  │
+│  └─────┬────┘  └─────────────────┬─────────────────┘  └────────────┘  │
+│        │                         │                                     │
+│  ┌─────▼─────┐          ┌────────▼────────┐                           │
+│  │ AI Service│          │   PostgreSQL    │                           │
+│  │ (Python)  │          │  (Persistence)  │                           │
+│  └───────────┘          └─────────────────┘                           │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+</pre>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <div class="card-icon">⚡</div>
+                    <h4>API Gateway</h4>
+                    <p>Puerta de entrada única. Rate limiting, CORS, autenticación JWT, logging centralizado.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">👥</div>
+                    <h4>User Service</h4>
+                    <p>Gestión de usuarios, roles, autenticación y sesiones.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">📦</div>
+                    <h4>Order Service</h4>
+                    <p>Core del negocio: pedidos, motos, sucursales, rutas, KPIs.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🤖</div>
+                    <h4>AI Service</h4>
+                    <p>Algoritmo Round-Robin para asignación inteligente de pedidos.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🔌</div>
+                    <h4>Integration Service</h4>
+                    <p>Conexión con sistemas externos: APIs, webhooks, importación masiva.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🗄️</div>
+                    <h4>PostgreSQL</h4>
+                    <p>Base de datos relacional con todas las entidades del sistema.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODELO DE SUCURSALES -->
+        <section class="section" id="sucursales">
+            <h2><span class="emoji">🏢</span>Modelo de Sucursales (CRÍTICO)</h2>
+            
+            <div class="highlight-box">
+                <strong>Principio clave:</strong> Cada sucursal es un "mini-tenant" con sus propios usuarios, motos y pedidos. 
+                El aislamiento garantiza que una sucursal NO puede ver los recursos de otra (excepto roles globales).
+            </div>
+
+            <div class="diagram">
+<pre>
+                    ┌─────────────────────────────────┐
+                    │         LOGITRACK               │
+                    │   (Multi-Sucursal / Multi-Tenant)│
+                    └────────────────┬────────────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+│  SUCURSAL A   │          │  SUCURSAL B   │          │  SUCURSAL C   │
+│   (Central)   │          │  (Zona Norte) │          │  (Zona Sur)   │
+├───────────────┤          ├───────────────┤          ├───────────────┤
+│               │          │               │          │               │
+│ 👤 Usuarios   │          │ 👤 Usuarios   │          │ 👤 Usuarios   │
+│  - Supervisor │          │  - Supervisor │          │  - Supervisor │
+│  - Analista   │          │  - Drivers    │          │  - Drivers    │
+│               │          │               │          │               │
+│ 🏍️ Motos     │          │ 🏍️ Motos     │          │ 🏍️ Motos     │
+│  - MOTO-001   │◄────────►│  - MOTO-004   │          │  - MOTO-007   │
+│  - MOTO-002   │Transferir│  - MOTO-005   │          │  - MOTO-008   │
+│  - MOTO-003   │ temporal │  - MOTO-006   │          │  - MOTO-009   │
+│               │          │               │          │               │
+│ 📦 Pedidos    │          │ 📦 Pedidos    │          │ 📦 Pedidos    │
+│  (Solo suyos) │          │  (Solo suyos) │          │  (Solo suyos) │
+│               │          │               │          │               │
+└───────────────┘          └───────────────┘          └───────────────┘
+</pre>
+            </div>
+
+            <h3>Reglas de Aislamiento por Sucursal</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rol</th>
+                        <th>Alcance de Vista</th>
+                        <th>Puede Transferir Motos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Admin</strong></td>
+                        <td>Todas las sucursales</td>
+                        <td><span class="badge badge-green">✅ Sí</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gerente</strong></td>
+                        <td>Todas las sucursales (solo lectura)</td>
+                        <td><span class="badge badge-red">❌ No</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Coordinador</strong></td>
+                        <td>Todas las sucursales (visitas)</td>
+                        <td><span class="badge badge-red">❌ No</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Supervisor</strong></td>
+                        <td>Solo SU sucursal</td>
+                        <td><span class="badge badge-green">✅ Sí (a otra)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Analista</strong></td>
+                        <td>Solo SU sucursal</td>
+                        <td><span class="badge badge-red">❌ No</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Driver</strong></td>
+                        <td>Solo SUS pedidos asignados</td>
+                        <td><span class="badge badge-red">❌ No</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- JERARQUÍA -->
+        <section class="section" id="jerarquia">
+            <h2><span class="emoji">👥</span>Jerarquía Organizacional</h2>
+            
+            <div class="diagram">
+<pre>
+                         ┌──────────────┐
+                         │    ADMIN     │ ← Configuración global
+                         │  (Sistema)   │   Todos los accesos
+                         └──────┬───────┘
+                                │
+              ┌─────────────────┼─────────────────┐
+              │                 │                 │
+              ▼                 ▼                 ▼
+     ┌────────────────┐ ┌──────────────┐ ┌──────────────────┐
+     │    GERENTE     │ │ COORDINADOR  │ │    ANALISTA      │
+     │  (Logística)   │ │   (Visitas)  │ │    (Reportes)    │
+     │                │ │              │ │                  │
+     │ • KPIs globales│ │ • Check-in   │ │ • Alertas        │
+     │ • Overview     │ │ • Checklist  │ │ • Predicción     │
+     │ • Comparativos │ │ • Auditorías │ │ • Balanceo       │
+     └────────────────┘ └──────────────┘ └──────────────────┘
+              │
+              │ Supervisa
+              ▼
+     ┌─────────────────────────────────────────────────┐
+     │                  SUCURSAL X                     │
+     ├─────────────────────────────────────────────────┤
+     │                                                 │
+     │    ┌──────────────┐                             │
+     │    │  SUPERVISOR  │ ← Gestiona operaciones      │
+     │    └──────┬───────┘   de SU sucursal            │
+     │           │                                     │
+     │    ┌──────┴───────┐                             │
+     │    │              │                             │
+     │    ▼              ▼                             │
+     │ ┌──────┐     ┌──────┐     ┌──────┐             │
+     │ │MOTO 1│     │MOTO 2│     │MOTO 3│             │
+     │ │Driver│     │Driver│     │Driver│             │
+     │ └──────┘     └──────┘     └──────┘             │
+     │                                                 │
+     │ ┌──────────────────────────────────────────┐   │
+     │ │           PEDIDOS DE LA SUCURSAL         │   │
+     │ │  • Pedido 101  • Pedido 102  • Pedido 103│   │
+     │ └──────────────────────────────────────────┘   │
+     │                                                 │
+     └─────────────────────────────────────────────────┘
+</pre>
+            </div>
+
+            <div class="grid">
+                <div class="role-card">
+                    <h4>🔑 Admin</h4>
+                    <p>Acceso total al sistema. Configuración, usuarios, todas las sucursales.</p>
+                </div>
+                <div class="role-card">
+                    <h4>📈 Gerente de Logística</h4>
+                    <p>Dashboard gerencial con KPIs globales, comparativos entre sucursales.</p>
+                </div>
+                <div class="role-card">
+                    <h4>📋 Coordinador</h4>
+                    <p>Check-in GPS en sucursales, checklist de auditoría, registro de visitas.</p>
+                </div>
+                <div class="role-card">
+                    <h4>📊 Supervisor</h4>
+                    <p>Gestión operativa de SU sucursal: pedidos, motos, optimización.</p>
+                </div>
+                <div class="role-card">
+                    <h4>📉 Analista</h4>
+                    <p>Reportes, alertas de capacidad, predicción de demanda.</p>
+                </div>
+                <div class="role-card">
+                    <h4>🏍️ Driver</h4>
+                    <p>App móvil para entregas: rutas, confirmaciones, tracking GPS.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TRANSFERENCIAS -->
+        <section class="section" id="transferencias">
+            <h2><span class="emoji">🔄</span>Transferencia de Motos entre Sucursales</h2>
+            
+            <p>Cuando una sucursal tiene alta demanda y otra tiene motos disponibles, se puede realizar una transferencia temporal.</p>
+
+            <div class="diagram">
+<pre>
+ESCENARIO: Sucursal A tiene muchos pedidos, Sucursal B tiene motos libres
+
+┌─────────────┐                              ┌─────────────┐
+│ SUCURSAL A  │                              │ SUCURSAL B  │
+│             │                              │             │
+│ 🏍️ MOTO-001 │                              │ 🏍️ MOTO-004 │
+│ 🏍️ MOTO-002 │                              │ 🏍️ MOTO-005 │ ← Libre
+│             │                              │ 🏍️ MOTO-006 │ ← Libre
+│ 📦 15 pedidos│                              │ 📦 2 pedidos │
+│    pendientes│                              │    pendientes│
+└──────┬──────┘                              └──────┬──────┘
+       │                                            │
+       │  Supervisor A solicita apoyo               │
+       │◄───────────────────────────────────────────┤
+       │                                            │
+       │        Admin/Gerente autoriza              │
+       │────────────────────────────────────────────►
+       │                                            │
+       │     MOTO-005 transferida temporalmente     │
+       │◄───────────────────────────────────────────┤
+       │                                            │
+       ▼                                            ▼
+┌─────────────┐                              ┌─────────────┐
+│ SUCURSAL A  │                              │ SUCURSAL B  │
+│             │                              │             │
+│ 🏍️ MOTO-001 │                              │ 🏍️ MOTO-004 │
+│ 🏍️ MOTO-002 │                              │ 🏍️ MOTO-006 │
+│ 🏍️ MOTO-005 │ ← Temporal                   │             │
+│   (de B)    │                              │             │
+└─────────────┘                              └─────────────┘
+
+* Al finalizar el turno, MOTO-005 regresa automáticamente a Sucursal B
+</pre>
+            </div>
+
+            <h3>API de Transferencias</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Método</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>POST /transfers</code></td>
+                        <td>POST</td>
+                        <td>Crear transferencia temporal o permanente</td>
+                    </tr>
+                    <tr>
+                        <td><code>PUT /motos/:id/return</code></td>
+                        <td>PUT</td>
+                        <td>Regresar moto a su sucursal original</td>
+                    </tr>
+                    <tr>
+                        <td><code>GET /transfers</code></td>
+                        <td>GET</td>
+                        <td>Listar motos actualmente transferidas</td>
+                    </tr>
+                    <tr>
+                        <td><code>GET /transfers/history</code></td>
+                        <td>GET</td>
+                        <td>Historial de transferencias</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- MODELO DE DATOS -->
+        <section class="section" id="datos">
+            <h2><span class="emoji">📋</span>Modelo de Datos</h2>
+            
+            <div class="diagram">
+<pre>
+users                          motos                         orders
+─────                          ─────                         ──────
+id                             id                            id
+name                           license_plate                 client_name
+email                          driver_id ──────────────────► address
+role                           branch_id ─────┐              status
+branch ──────────────────────► current_branch_id ◄──────────  branch ─────┐
+                               status                        assigned_moto_id
+                               latitude                      latitude
+                               longitude                     longitude
+         │                     max_orders_capacity
+         │                     transfer_expires_at
+         │                              │
+         │                              │
+         ▼                              ▼
+    ┌─────────┐                 ┌─────────────────┐
+    │ branches│                 │  moto_transfers │
+    └─────────┘                 └─────────────────┘
+    id                          id
+    name                        moto_id
+    code                        from_branch_id
+    latitude                    to_branch_id
+    longitude                   transferred_by
+    radius_km                   expires_at
+    is_active                   status
+</pre>
+            </div>
+        </section>
+
+        <!-- SEGURIDAD -->
+        <section class="section" id="seguridad">
+            <h2><span class="emoji">🔐</span>Filtros de Seguridad por Sucursal</h2>
+            
+            <p>Todas las consultas del backend aplican filtros automáticos según el rol del usuario:</p>
+
+            <div class="diagram">
+<pre>
+// Backend (Go)
+func GetMotos(c *gin.Context) {
+    userBranch := c.GetHeader("X-User-Branch")
+    userRole := c.GetHeader("X-User-Role")
+    
+    query := "SELECT * FROM motos"
+    
+    // Solo admin/manager/coordinator ven todas las sucursales
+    if userRole != "admin" && userRole != "manager" && userRole != "coordinator" {
+        query += " WHERE current_branch_id = (SELECT id FROM branches WHERE code = ?)"
+        // Añadir userBranch como parámetro
+    }
+}
+</pre>
+            </div>
+
+            <div class="highlight-box">
+                <strong>Resultado:</strong> Un supervisor de "Zona Norte" NUNCA podrá ver motos o pedidos de "Central" o "Zona Sur", 
+                incluso si intenta modificar la URL o los parámetros de la API.
+            </div>
+        </section>
+
+        <footer>
+            <p>📄 Documento generado para Logitrack</p>
+            <p>Última actualización: Diciembre 2024</p>
+        </footer>
+    </div>
+</body>
+</html>

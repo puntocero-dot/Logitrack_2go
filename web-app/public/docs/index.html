@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logitrack - Documentación</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            margin-bottom: 3rem;
+        }
+
+        .cards {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 280px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(59, 130, 246, 0.2);
+            border-color: var(--accent-blue);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo">🚀</div>
+        <h1>LOGITRACK</h1>
+        <p class="subtitle">Documentación del Sistema</p>
+
+        <div class="cards">
+            <a href="arquitectura.html" class="card">
+                <div class="card-icon">🏗️</div>
+                <h3>Arquitectura</h3>
+                <p>Visión general del sistema, microservicios, roles y modelo de datos.</p>
+            </a>
+
+            <a href="../" class="card">
+                <div class="card-icon">📊</div>
+                <h3>Dashboard</h3>
+                <p>Acceder a la aplicación principal de Logitrack.</p>
+            </a>
+
+            <a href="https://github.com/puntocero-dot/Logitrack_2go" class="card" target="_blank">
+                <div class="card-icon">💻</div>
+                <h3>GitHub</h3>
+                <p>Código fuente y repositorio del proyecto.</p>
+            </a>
+        </div>
+    </div>
+</body>
+
+</html>

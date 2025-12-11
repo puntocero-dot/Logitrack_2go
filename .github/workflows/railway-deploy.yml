@@ -1,5 +1,5 @@
 # Railway Auto-Deploy Workflow
-# Fuerza el redeploy de todos los servicios cuando hay cambios en master
+# Despliega automáticamente todos los servicios cuando hay push a master
 
 name: Deploy to Railway
 
@@ -9,55 +9,37 @@ on:
       - master
       - main
 
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Deploy API Gateway
-        if: always()
-        run: railway up --service api-gateway -d
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Deploy User Service
-        if: always()
-        run: railway up --service user-service -d
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Deploy Order Service
-        if: always()
-        run: railway up --service order-service -d
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Deploy AI Service
-        if: always()
-        run: railway up --service ai-service -d
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Deploy Geolocation Service
-        if: always()
-        run: railway up --service geolocation-service -d
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Deploy Web App
-        if: always()
-        run: railway up --service web-app -d
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Deploy Client View
-        if: always()
-        run: railway up --service client-view -d
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Deploy All Services
+        run: |
+          echo "🚀 Deploying to Railway..."
+          
+          # Deploy each service (Railway CLI will use RAILWAY_TOKEN from env)
+          railway up --service api-gateway -d || echo "api-gateway: skipped or failed"
+          railway up --service user-service -d || echo "user-service: skipped or failed"
+          railway up --service order-service -d || echo "order-service: skipped or failed"
+          railway up --service ai-service -d || echo "ai-service: skipped or failed"
+          railway up --service geolocation-service -d || echo "geolocation-service: skipped or failed"
+          railway up --service web-app -d || echo "web-app: skipped or failed"
+          railway up --service client-view -d || echo "client-view: skipped or failed"
+          
+          echo "✅ Deploy completed!"

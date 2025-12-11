@@ -88,6 +88,7 @@ func main() {
 	orderServiceURL := getEnv("ORDER_SERVICE_URL", "http://order-service:8080")
 	geoServiceURL := getEnv("GEO_SERVICE_URL", "http://geolocation-service:8083")
 	aiServiceURL := getEnv("AI_SERVICE_URL", "http://ai-service:5000")
+	integrationServiceURL := getEnv("INTEGRATION_SERVICE_URL", "http://integration-service:8084")
 
 	// ========================================
 	// ✅ RUTAS DE AUTENTICACIÓN (sin /auth prefix en destino)
@@ -171,6 +172,18 @@ func main() {
 	// ========================================
 	r.Any("/ai/*path", proxyWildcard(aiServiceURL))
 
+	// ========================================
+	// ✅ RUTAS DE INTEGRACIÓN (conexión con sistemas externos)
+	// ========================================
+	r.GET("/integrations", proxyTo(integrationServiceURL, "/integrations"))
+	r.POST("/integrations", proxyTo(integrationServiceURL, "/integrations"))
+	r.PUT("/integrations/:id", proxyToWithParam(integrationServiceURL, "/integrations"))
+	r.DELETE("/integrations/:id", proxyToWithParam(integrationServiceURL, "/integrations"))
+	r.POST("/sync/:id", proxyToWithParam(integrationServiceURL, "/sync"))
+	r.GET("/sync/status/:id", proxyToWithNestedParam(integrationServiceURL, "/sync/status", ""))
+	r.POST("/webhook/:name", proxyToWithParam(integrationServiceURL, "/webhook"))
+	r.POST("/import/orders", proxyTo(integrationServiceURL, "/import/orders"))
+
 	// Iniciar servidor
 	port := getEnv("PORT", "8080")
 	logger.Info().Str("port", port).Msg("API Gateway iniciado")
@@ -178,6 +191,7 @@ func main() {
 	logger.Info().Str("order_service", orderServiceURL).Msg("Order Service URL")
 	logger.Info().Str("geo_service", geoServiceURL).Msg("Geo Service URL")
 	logger.Info().Str("ai_service", aiServiceURL).Msg("AI Service URL")
+	logger.Info().Str("integration_service", integrationServiceURL).Msg("Integration Service URL")
 
 	if err := r.Run(":" + port); err != nil {
 		logger.Fatal().Err(err).Msg("Error al iniciar gateway")

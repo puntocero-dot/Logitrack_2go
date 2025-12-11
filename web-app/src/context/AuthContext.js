@@ -24,17 +24,30 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const res = await axios.post(`${AUTH_API_BASE_URL}/login`, { email, password });
-      const rawToken = res.data.token;
+      // El API devuelve access_token y user (no solo token)
+      const rawToken = res.data.access_token || res.data.token;
+      const userData = res.data.user;
+
       setToken(rawToken);
       localStorage.setItem('token', rawToken);
-      const claims = decodeToken(rawToken);
-      if (claims) {
-        setUser({ id: claims.user_id, email, role: claims.role });
+
+      // Usar datos del user si existe, sino decodificar token
+      if (userData && userData.role) {
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          name: userData.name,
+          role: userData.role
+        });
       } else {
-        setUser({ email, role: 'supervisor' });
+        const claims = decodeToken(rawToken);
+        if (claims) {
+          setUser({ id: claims.user_id, email, role: claims.role });
+        }
       }
       return true;
     } catch (err) {
+      console.error('Login error:', err);
       return false;
     }
   };

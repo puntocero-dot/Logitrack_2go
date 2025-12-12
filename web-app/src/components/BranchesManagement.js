@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import './BranchesManagement.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api-gateway-production-ad21.up.railway.app';
+const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 
 const BranchesManagement = () => {
     const [branches, setBranches] = useState([]);
@@ -20,6 +21,10 @@ const BranchesManagement = () => {
         is_active: true,
     });
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [addressSuggestions, setAddressSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isGeocoding, setIsGeocoding] = useState(false);
+    const debounceRef = useRef(null);
 
     useEffect(() => {
         fetchBranches();
@@ -44,6 +49,62 @@ const BranchesManagement = () => {
 
     const handleFilterChange = (e) => {
         setFilter({ ...filter, [e.target.name]: e.target.value });
+    };
+
+    // Geocoding: buscar sugerencias de direcciones
+    const searchAddress = useCallback(async (query) => {
+        if (!query || query.length < 3 || !MAPBOX_TOKEN) {
+            setAddressSuggestions([]);
+            return;
+        }
+        setIsGeocoding(true);
+        try {
+            const res = await axios.get(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
+                {
+                    params: {
+                        access_token: MAPBOX_TOKEN,
+                        limit: 5,
+                        types: 'address,place,poi',
+                        language: 'es'
+                    }
+                }
+            );
+            setAddressSuggestions(res.data.features || []);
+            setShowSuggestions(true);
+        } catch (err) {
+            console.error('Geocoding error:', err);
+            setAddressSuggestions([]);
+        } finally {
+            setIsGeocoding(false);
+        }
+    }, []);
+
+    // Manejar cambio en el campo de dirección con debounce
+    const handleAddressChange = (e) => {
+        const value = e.target.value;
+        setForm({ ...form, address: value });
+
+        // Debounce: esperar 500ms después de que el usuario deje de escribir
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+        debounceRef.current = setTimeout(() => {
+            searchAddress(value);
+        }, 500);
+    };
+
+    // Seleccionar una sugerencia de dirección
+    const selectAddressSuggestion = (suggestion) => {
+        const [lng, lat] = suggestion.center;
+        setForm({
+            ...form,
+            address: suggestion.place_name,
+            latitude: lat.toFixed(6),
+            longitude: lng.toFixed(6)
+        });
+        setShowSuggestions(false);
+        setAddressSuggestions([]);
     };
 
     const resetForm = () => {
@@ -199,15 +260,27 @@ const BranchesManagement = () => {
                             </div>
                         </div>
 
-                        <div className="form-group full-width">
-                            <label>Dirección</label>
+                        <div className="form-group full-width address-autocomplete">
+                            <label>Dirección {isGeocoding && <span className="geocoding-indicator">🔍</span>}</label>
                             <input
                                 type="text"
                                 name="address"
-                                placeholder="Av. Principal 123, Zona 1"
+                                placeholder="Escribe una dirección para autocompletar coordenadas..."
                                 value={form.address}
-                                onChange={handleChange}
+                                onChange={handleAddressChange}
+                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                autoComplete="off"
                             />
+                            {showSuggestions && addressSuggestions.length > 0 && (
+                                <ul className="address-suggestions">
+                                    {addressSuggestions.map((s, idx) => (
+                                        <li key={idx} onClick={() => selectAddressSuggestion(s)}>
+                                            <span className="suggestion-icon">📍</span>
+                                            <span className="suggestion-text">{s.place_name}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
 
                         <div className="form-row">

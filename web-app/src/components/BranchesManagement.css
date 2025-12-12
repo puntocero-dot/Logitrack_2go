@@ -132,6 +132,73 @@
     color: #6b7280;
 }
 
+/* Address Autocomplete */
+.address-autocomplete {
+    position: relative;
+}
+
+.geocoding-indicator {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.address-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(30, 30, 60, 0.98);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 10px;
+    margin-top: 4px;
+    padding: 0.5rem 0;
+    list-style: none;
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.address-suggestions li {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.address-suggestions li:last-child {
+    border-bottom: none;
+}
+
+.address-suggestions li:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.suggestion-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.suggestion-text {
+    color: #e5e7eb;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
 .checkbox-group {
     justify-content: center;
 }

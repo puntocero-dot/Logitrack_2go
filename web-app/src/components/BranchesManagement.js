@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import Map, { Marker, NavigationControl } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import './BranchesManagement.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api-gateway-production-ad21.up.railway.app';
-const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+// Fallback token si no está en variables de entorno
+const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN || 'pk.eyJ1IjoibG9naXRyYWNrIiwiYSI6ImNtNHJvOXBhZzBhMXYybG9qMGxkMGZyYTkifQ.fmeq3YAtxTW94Y3083nAdw';
 
 const BranchesManagement = () => {
     const [branches, setBranches] = useState([]);
@@ -24,6 +27,12 @@ const BranchesManagement = () => {
     const [addressSuggestions, setAddressSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
+    const [showMap, setShowMap] = useState(false);
+    const [mapViewState, setMapViewState] = useState({
+        longitude: -90.5069,
+        latitude: 14.6349,
+        zoom: 12
+    });
     const debounceRef = useRef(null);
 
     useEffect(() => {
@@ -105,7 +114,38 @@ const BranchesManagement = () => {
         });
         setShowSuggestions(false);
         setAddressSuggestions([]);
+        // Centrar mapa en la ubicación seleccionada
+        setMapViewState({ longitude: lng, latitude: lat, zoom: 15 });
     };
+
+    // Click en el mapa para seleccionar ubicación
+    const handleMapClick = useCallback(async (event) => {
+        const { lngLat } = event;
+        const lat = lngLat.lat;
+        const lng = lngLat.lng;
+
+        setForm(prev => ({
+            ...prev,
+            latitude: lat.toFixed(6),
+            longitude: lng.toFixed(6)
+        }));
+
+        // Reverse geocoding para obtener la dirección
+        try {
+            const res = await axios.get(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json`,
+                { params: { access_token: MAPBOX_TOKEN, language: 'es' } }
+            );
+            if (res.data.features && res.data.features.length > 0) {
+                setForm(prev => ({
+                    ...prev,
+                    address: res.data.features[0].place_name
+                }));
+            }
+        } catch (err) {
+            console.error('Reverse geocoding error:', err);
+        }
+    }, []);
 
     const resetForm = () => {
         setForm({
@@ -281,7 +321,38 @@ const BranchesManagement = () => {
                                     ))}
                                 </ul>
                             )}
+                            <button type="button" className="btn-map-toggle" onClick={() => setShowMap(!showMap)}>
+                                {showMap ? '🗺️ Ocultar Mapa' : '🗺️ Seleccionar en Mapa'}
+                            </button>
                         </div>
+
+                        {/* Mapa interactivo */}
+                        {showMap && (
+                            <div className="map-picker-container">
+                                <p className="map-hint">👆 Haz clic en el mapa para seleccionar la ubicación</p>
+                                <div className="map-picker">
+                                    <Map
+                                        {...mapViewState}
+                                        onMove={evt => setMapViewState(evt.viewState)}
+                                        onClick={handleMapClick}
+                                        style={{ width: '100%', height: '300px' }}
+                                        mapStyle="mapbox://styles/mapbox/dark-v11"
+                                        mapboxAccessToken={MAPBOX_TOKEN}
+                                    >
+                                        <NavigationControl position="top-right" />
+                                        {form.latitude && form.longitude && (
+                                            <Marker
+                                                longitude={parseFloat(form.longitude)}
+                                                latitude={parseFloat(form.latitude)}
+                                                anchor="bottom"
+                                            >
+                                                <div className="map-marker">📍</div>
+                                            </Marker>
+                                        )}
+                                    </Map>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="form-row">
                             <div className="form-group">

@@ -27,7 +27,7 @@ const BranchesManagement = () => {
 
     const fetchBranches = async () => {
         try {
-            const res = await axios.get(`${API_BASE_URL}/branches/all`);
+            const res = await axios.get(`${API_BASE_URL}/branches`);
             setBranches(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error('Error fetching branches', err);

@@ -60,26 +60,34 @@ const BranchesManagement = () => {
         setFilter({ ...filter, [e.target.name]: e.target.value });
     };
 
-    // Geocoding: buscar sugerencias de direcciones
+    // Geocoding: buscar sugerencias de direcciones usando Nominatim (OpenStreetMap - gratis)
     const searchAddress = useCallback(async (query) => {
-        if (!query || query.length < 3 || !MAPBOX_TOKEN) {
+        if (!query || query.length < 3) {
             setAddressSuggestions([]);
             return;
         }
         setIsGeocoding(true);
         try {
             const res = await axios.get(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
+                'https://nominatim.openstreetmap.org/search',
                 {
                     params: {
-                        access_token: MAPBOX_TOKEN,
+                        q: query,
+                        format: 'json',
                         limit: 5,
-                        types: 'address,place,poi',
-                        language: 'es'
+                        addressdetails: 1
+                    },
+                    headers: {
+                        'Accept-Language': 'es'
                     }
                 }
             );
-            setAddressSuggestions(res.data.features || []);
+            // Transformar respuesta al formato esperado
+            const suggestions = res.data.map(item => ({
+                place_name: item.display_name,
+                center: [parseFloat(item.lon), parseFloat(item.lat)]
+            }));
+            setAddressSuggestions(suggestions);
             setShowSuggestions(true);
         } catch (err) {
             console.error('Geocoding error:', err);
@@ -130,16 +138,25 @@ const BranchesManagement = () => {
             longitude: lng.toFixed(6)
         }));
 
-        // Reverse geocoding para obtener la dirección
+        // Reverse geocoding con Nominatim (OpenStreetMap - gratis)
         try {
             const res = await axios.get(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json`,
-                { params: { access_token: MAPBOX_TOKEN, language: 'es' } }
+                'https://nominatim.openstreetmap.org/reverse',
+                {
+                    params: {
+                        lat: lat,
+                        lon: lng,
+                        format: 'json'
+                    },
+                    headers: {
+                        'Accept-Language': 'es'
+                    }
+                }
             );
-            if (res.data.features && res.data.features.length > 0) {
+            if (res.data && res.data.display_name) {
                 setForm(prev => ({
                     ...prev,
-                    address: res.data.features[0].place_name
+                    address: res.data.display_name
                 }));
             }
         } catch (err) {

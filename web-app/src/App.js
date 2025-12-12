@@ -136,9 +136,9 @@ function AppRoutes() {
       <Route
         path="/admin"
         element={
-          <AdminRoute>
+          <RoleRoute allowedRoles={['admin']}>
             <AdminMotos />
-          </AdminRoute>
+          </RoleRoute>
         }
       />
 
@@ -176,9 +176,9 @@ function AppRoutes() {
       <Route
         path="/users"
         element={
-          <AdminRoute>
+          <RoleRoute allowedRoles={['admin']}>
             <UsersManagement />
-          </AdminRoute>
+          </RoleRoute>
         }
       />
 

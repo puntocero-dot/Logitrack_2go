@@ -87,6 +87,7 @@ func main() {
 	r.POST("/visits/check-in", handlers.CheckIn)
 	r.PUT("/visits/:id/check-out", handlers.CheckOut)
 	r.GET("/visits/active", handlers.GetActiveVisit)
+	r.GET("/visits/all-active", handlers.GetAllActiveVisits) // Para el mapa
 	r.GET("/visits", handlers.GetVisitHistory)
 
 	// Coordinadores - Checklist

@@ -67,6 +67,27 @@ const orderIcon = (color) => L.divIcon({
     popupAnchor: [0, -35]
 });
 
+// Coordinator icon
+const coordinatorIcon = L.divIcon({
+    className: 'coordinator-marker',
+    html: `<div style="
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        border: 3px solid white;
+        box-shadow: 0 4px 15px rgba(6, 182, 212, 0.5);
+        animation: coordinatorPulse 2s infinite;
+    ">👷</div>`,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+    popupAnchor: [0, -22]
+});
+
 // Component to fit bounds when data changes
 function FitBounds({ markers }) {
     const map = useMap();
@@ -85,23 +106,27 @@ const LiveMap = () => {
     const [motos, setMotos] = useState([]);
     const [orders, setOrders] = useState([]);
     const [branches, setBranches] = useState([]);
+    const [coordinators, setCoordinators] = useState([]);
     const [filters, setFilters] = useState({
         showMotos: true,
         showOrders: true,
         showBranches: true,
+        showCoordinators: true,
         statusFilter: 'all'
     });
 
     const fetchData = useCallback(async () => {
         try {
-            const [motosRes, ordersRes, branchesRes] = await Promise.all([
+            const [motosRes, ordersRes, branchesRes, coordinatorsRes] = await Promise.all([
                 axios.get(`${ORDER_API_BASE_URL}/motos`),
                 axios.get(`${ORDER_API_BASE_URL}/orders`),
-                axios.get(`${ORDER_API_BASE_URL}/branches`)
+                axios.get(`${ORDER_API_BASE_URL}/branches`),
+                axios.get(`${ORDER_API_BASE_URL}/visits/all-active`)
             ]);
             setMotos(motosRes.data || []);
             setOrders(ordersRes.data || []);
             setBranches(branchesRes.data || []);
+            setCoordinators(coordinatorsRes.data || []);
         } catch (err) {
             console.error('Error fetching map data:', err);
         }
@@ -133,6 +158,7 @@ const LiveMap = () => {
     });
 
     const activeMotos = motos.filter(m => m.latitude && m.longitude);
+    const activeCoordinators = coordinators.filter(c => c.latitude && c.longitude);
 
     // Route lines (moto -> assigned orders)
     const routeLines = [];
@@ -154,11 +180,23 @@ const LiveMap = () => {
     const allMarkers = [
         ...activeMotos.map(m => ({ lat: m.latitude, lng: m.longitude })),
         ...branches.filter(b => b.latitude && b.longitude).map(b => ({ lat: b.latitude, lng: b.longitude })),
-        ...filteredOrders.filter(o => o.latitude && o.longitude).map(o => ({ lat: o.latitude, lng: o.longitude }))
+        ...filteredOrders.filter(o => o.latitude && o.longitude).map(o => ({ lat: o.latitude, lng: o.longitude })),
+        ...activeCoordinators.map(c => ({ lat: c.latitude, lng: c.longitude }))
     ];
 
     // Default center (Guatemala City)
     const defaultCenter = [14.6349, -90.5069];
+
+    // Format time ago
+    const formatTimeAgo = (dateStr) => {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 60) return `${diffMins} min`;
+        const diffHours = Math.floor(diffMins / 60);
+        return `${diffHours}h ${diffMins % 60}m`;
+    };
 
     return (
         <div className="live-map-container">
@@ -173,6 +211,14 @@ const LiveMap = () => {
                             onChange={(e) => setFilters({ ...filters, showMotos: e.target.checked })}
                         />
                         🏍️ Motos ({activeMotos.length})
+                    </label>
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={filters.showCoordinators}
+                            onChange={(e) => setFilters({ ...filters, showCoordinators: e.target.checked })}
+                        />
+                        👷 Coordinadores ({activeCoordinators.length})
                     </label>
                     <label>
                         <input
@@ -206,13 +252,16 @@ const LiveMap = () => {
                 </div>
                 <div className="map-legend">
                     <div className="legend-item">
-                        <span className="legend-dot" style={{ background: '#10b981' }}></span> Disponible
+                        <span className="legend-dot" style={{ background: '#10b981' }}></span> Moto Disponible
                     </div>
                     <div className="legend-item">
-                        <span className="legend-dot" style={{ background: '#f59e0b' }}></span> Ocupado
+                        <span className="legend-dot" style={{ background: '#f59e0b' }}></span> Moto Ocupada
                     </div>
                     <div className="legend-item">
-                        <span className="legend-dot" style={{ background: '#8b5cf6' }}></span> En Ruta
+                        <span className="legend-dot" style={{ background: '#8b5cf6' }}></span> Moto En Ruta
+                    </div>
+                    <div className="legend-item">
+                        <span className="legend-dot" style={{ background: '#06b6d4' }}></span> Coordinador Activo
                     </div>
                 </div>
                 <button className="btn btn-secondary" onClick={fetchData} style={{ marginTop: '1rem', width: '100%' }}>
@@ -265,6 +314,25 @@ const LiveMap = () => {
                                 </Popup>
                             </Marker>
                         )
+                    ))}
+
+                    {/* Coordinators */}
+                    {filters.showCoordinators && activeCoordinators.map(coord => (
+                        <Marker
+                            key={`coord-${coord.id}`}
+                            position={[coord.latitude, coord.longitude]}
+                            icon={coordinatorIcon}
+                        >
+                            <Popup>
+                                <div className="map-popup">
+                                    <h4>👷 {coord.coordinator_name}</h4>
+                                    <p><strong>Sucursal:</strong> {coord.branch_name}</p>
+                                    <p><strong>Tiempo:</strong> {formatTimeAgo(coord.check_in_time)}</p>
+                                    <p><strong>Distancia:</strong> {coord.distance_meters}m de sucursal</p>
+                                    <p className="coordinator-active-badge">🟢 En visita activa</p>
+                                </div>
+                            </Popup>
+                        </Marker>
                     ))}
 
                     {/* Motos */}
@@ -407,6 +475,16 @@ const LiveMap = () => {
           display: inline-block;
         }
 
+        .coordinator-active-badge {
+          background: #d1fae5;
+          color: #065f46;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          display: inline-block;
+          margin-top: 0.5rem;
+        }
+
         .custom-marker {
           background: none;
           border: none;
@@ -418,6 +496,12 @@ const LiveMap = () => {
 
         .leaflet-popup-content {
           margin: 0.75rem 1rem;
+        }
+
+        @keyframes coordinatorPulse {
+          0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.6); }
+          70% { box-shadow: 0 0 0 15px rgba(6, 182, 212, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
         }
       `}</style>
         </div>

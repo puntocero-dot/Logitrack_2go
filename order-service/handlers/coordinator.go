@@ -143,6 +143,53 @@ func GetActiveVisit(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"active_visit": visit})
 }
 
+// GetAllActiveVisits obtiene todas las visitas activas de todos los coordinadores (para el mapa)
+func GetAllActiveVisits(c *gin.Context) {
+	rows, err := db.Query(`
+		SELECT cv.id, cv.coordinator_id, COALESCE(u.name, 'Coordinador ' || cv.coordinator_id::text), 
+		       cv.branch_id, b.name, cv.check_in_time,
+		       cv.check_in_latitude, cv.check_in_longitude, cv.distance_to_branch_meters, cv.status
+		FROM coordinator_visits cv
+		JOIN branches b ON b.id = cv.branch_id
+		LEFT JOIN users u ON u.id = cv.coordinator_id
+		WHERE cv.status = 'in_progress'
+		ORDER BY cv.check_in_time DESC`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var visits []map[string]interface{}
+	for rows.Next() {
+		var id, coordinatorID, branchID, distanceMeters int
+		var coordinatorName, branchName, status string
+		var checkInTime time.Time
+		var lat, lng float64
+
+		err := rows.Scan(&id, &coordinatorID, &coordinatorName, &branchID, &branchName,
+			&checkInTime, &lat, &lng, &distanceMeters, &status)
+		if err != nil {
+			continue
+		}
+
+		visits = append(visits, map[string]interface{}{
+			"id":               id,
+			"coordinator_id":   coordinatorID,
+			"coordinator_name": coordinatorName,
+			"branch_id":        branchID,
+			"branch_name":      branchName,
+			"check_in_time":    checkInTime,
+			"latitude":         lat,
+			"longitude":        lng,
+			"distance_meters":  distanceMeters,
+			"status":           status,
+		})
+	}
+
+	c.JSON(http.StatusOK, visits)
+}
+
 // GetVisitHistory obtiene el historial de visitas
 func GetVisitHistory(c *gin.Context) {
 	coordinatorID := c.Query("coordinator_id")

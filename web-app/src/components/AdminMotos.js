@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ORDER_API_BASE_URL } from '../config/api';
+import { ORDER_API_BASE_URL, USER_API_BASE_URL } from '../config/api';
 import { useNavigate } from 'react-router-dom';
 
 const AdminMotos = () => {
   const [motos, setMotos] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [form, setForm] = useState({
     license_plate: '',
     status: 'available',
@@ -23,6 +24,7 @@ const AdminMotos = () => {
   useEffect(() => {
     fetchMotos();
     fetchBranches();
+    fetchDrivers();
   }, []);
 
   const fetchMotos = async () => {
@@ -42,6 +44,19 @@ const AdminMotos = () => {
     } catch (err) {
       console.error('Error fetching branches', err);
       setBranches([]);
+    }
+  };
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await axios.get(`${USER_API_BASE_URL}/users`);
+      const users = Array.isArray(res.data) ? res.data : [];
+      // Filter only drivers
+      const driverUsers = users.filter(u => u.role === 'driver' && u.active !== false);
+      setDrivers(driverUsers);
+    } catch (err) {
+      console.error('Error fetching drivers', err);
+      setDrivers([]);
     }
   };
 
@@ -79,15 +94,15 @@ const AdminMotos = () => {
 
       if (editing) {
         await axios.put(`${ORDER_API_BASE_URL}/motos/${editing.id}`, payload);
-        setMessage('Moto actualizada.');
+        setMessage('✅ Moto actualizada.');
       } else {
         await axios.post(`${ORDER_API_BASE_URL}/motos`, payload);
-        setMessage('Moto creada.');
+        setMessage('✅ Moto creada.');
       }
       resetForm();
       fetchMotos();
     } catch (err) {
-      setMessage('Error: ' + (err.response?.data?.error || err.message));
+      setMessage('❌ Error: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -108,10 +123,10 @@ const AdminMotos = () => {
     if (!window.confirm('¿Eliminar esta moto?')) return;
     try {
       await axios.delete(`${ORDER_API_BASE_URL}/motos/${id}`);
-      setMessage('Moto eliminada.');
+      setMessage('✅ Moto eliminada.');
       fetchMotos();
     } catch (err) {
-      setMessage('No se puede eliminar: tiene pedidos asociados.');
+      setMessage('❌ No se puede eliminar: tiene pedidos asociados.');
     }
   };
 
@@ -125,14 +140,14 @@ const AdminMotos = () => {
             latitude: position.coords.latitude.toFixed(6),
             longitude: position.coords.longitude.toFixed(6),
           });
-          setMessage('Ubicación obtenida del GPS.');
+          setMessage('📍 Ubicación obtenida del GPS.');
         },
         (error) => {
-          setMessage('Error al obtener ubicación: ' + error.message);
+          setMessage('❌ Error al obtener ubicación: ' + error.message);
         }
       );
     } else {
-      setMessage('Geolocalización no soportada en este navegador.');
+      setMessage('❌ Geolocalización no soportada en este navegador.');
     }
   };
 
@@ -154,11 +169,23 @@ const AdminMotos = () => {
     return branch ? branch.name : '-';
   };
 
+  const getDriverName = (driverId) => {
+    const driver = drivers.find(d => d.id === driverId);
+    return driver ? driver.name || driver.email : '-';
+  };
+
+  // Check if a driver is already assigned to another moto
+  const isDriverAssigned = (driverId) => {
+    if (!driverId) return false;
+    const assignedMoto = motos.find(m => m.driver_id === parseInt(driverId) && m.id !== editing?.id);
+    return assignedMoto !== undefined;
+  };
+
   return (
     <div className="dashboard-shell">
       <div className="dashboard-inner">
         <div className="dashboard-header">
-          <h2 className="dashboard-title">Administrar Motos</h2>
+          <h2 className="dashboard-title">🏍️ Administrar Motos</h2>
           <div className="metrics-row" style={{ marginBottom: 0 }}>
             <div className="metric-card">
               <div className="metric-label">Total Motos</div>
@@ -172,19 +199,23 @@ const AdminMotos = () => {
               <div className="metric-label">En Ruta</div>
               <div className="metric-value">{motos.filter(m => m.status === 'in_route').length}</div>
             </div>
+            <div className="metric-card">
+              <div className="metric-label">Con Driver</div>
+              <div className="metric-value">{motos.filter(m => m.driver_id).length}</div>
+            </div>
           </div>
         </div>
 
         {message && (
           <div
-            className={`alert ${message.toLowerCase().startsWith('error') || message.toLowerCase().includes('no se puede') ? 'alert--error' : 'alert--success'}`}
+            className={`alert ${message.includes('❌') || message.toLowerCase().includes('error') ? 'alert--error' : 'alert--success'}`}
           >
             {message}
           </div>
         )}
 
         <div className="form-card">
-          <h3>{editing ? 'Editar Moto' : 'Crear Nueva Moto'}</h3>
+          <h3>{editing ? '✏️ Editar Moto' : '➕ Crear Nueva Moto'}</h3>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
             <input
               type="text"
@@ -205,6 +236,26 @@ const AdminMotos = () => {
               {branches.map(b => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
+            </select>
+            <select
+              name="driver_id"
+              value={form.driver_id}
+              onChange={handleChange}
+              className="form-select"
+            >
+              <option value="">-- Conductor --</option>
+              {drivers.map(d => {
+                const alreadyAssigned = isDriverAssigned(d.id);
+                return (
+                  <option
+                    key={d.id}
+                    value={d.id}
+                    disabled={alreadyAssigned}
+                  >
+                    {d.name || d.email} {alreadyAssigned ? '(Ya asignado)' : ''}
+                  </option>
+                );
+              })}
             </select>
             <input
               type="number"
@@ -248,7 +299,7 @@ const AdminMotos = () => {
             </div>
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button type="submit" className="btn btn-primary">
-                {editing ? 'Actualizar' : 'Crear Moto'}
+                {editing ? '💾 Actualizar' : '➕ Crear Moto'}
               </button>
               {editing && (
                 <button type="button" className="btn btn-secondary" onClick={resetForm}>
@@ -265,11 +316,11 @@ const AdminMotos = () => {
               <tr>
                 <th>ID</th>
                 <th>Placa</th>
+                <th>Conductor</th>
                 <th>Sucursal</th>
                 <th>Estado</th>
                 <th>Capacidad</th>
-                <th>Pedidos Asig.</th>
-                <th>Ubicación</th>
+                <th>Pedidos</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -278,6 +329,13 @@ const AdminMotos = () => {
                 <tr key={moto.id}>
                   <td>{moto.id}</td>
                   <td><strong>{moto.license_plate}</strong></td>
+                  <td>
+                    {moto.driver_id ? (
+                      <span style={{ color: '#10b981' }}>👤 {getDriverName(moto.driver_id)}</span>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>Sin asignar</span>
+                    )}
+                  </td>
                   <td>{getBranchName(moto.branch_id)}</td>
                   <td>
                     <span className={getStatusBadgeClass(moto.status)}>{moto.status}</span>
@@ -287,15 +345,9 @@ const AdminMotos = () => {
                     <span className="badge-count">{moto.current_orders_count || 0}</span>
                   </td>
                   <td>
-                    {moto.latitude && moto.longitude
-                      ? `${moto.latitude.toFixed(4)}, ${moto.longitude.toFixed(4)}`
-                      : <span style={{ color: '#9ca3af' }}>Sin ubicación</span>
-                    }
-                  </td>
-                  <td>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       <button className="btn btn-secondary" onClick={() => handleEdit(moto)}>
-                        Editar
+                        ✏️ Editar
                       </button>
                       <button
                         className="btn btn-primary"

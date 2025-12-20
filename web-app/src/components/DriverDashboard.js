@@ -1,46 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { ORDER_API_BASE_URL } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 
 const DriverDashboard = () => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [myMoto, setMyMoto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState({});
   const [etas, setEtas] = useState({});
 
-  // Hardcoded driver for now; in real app, get from JWT token
-  const DRIVER_ID = 1; //假设 driver id 1
+  // Get driver ID from logged-in user
+  const driverId = user?.id;
+
+  const fetchMyMoto = useCallback(async () => {
+    if (!driverId) return null;
+    try {
+      const res = await axios.get(`${ORDER_API_BASE_URL}/motos`);
+      const motos = Array.isArray(res.data) ? res.data : [];
+      const assigned = motos.find(m => m.driver_id === driverId);
+      setMyMoto(assigned || null);
+      return assigned;
+    } catch (err) {
+      console.error('Error fetching my moto', err);
+      setMyMoto(null);
+      return null;
+    }
+  }, [driverId]);
+
+  const fetchMyOrders = useCallback(async (moto) => {
+    if (!moto) {
+      setOrders([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`${ORDER_API_BASE_URL}/orders`);
+      const all = Array.isArray(res.data) ? res.data : [];
+      const myOrders = all.filter(o => o.assigned_moto_id === moto.id);
+      setOrders(myOrders);
+    } catch (err) {
+      console.error('Error fetching orders', err);
+      setOrders([]);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchMyMoto = async () => {
-      try {
-        const res = await axios.get(`${ORDER_API_BASE_URL}/motos`);
-        const motos = Array.isArray(res.data) ? res.data : [];
-        const assigned = motos.find(m => m.driver_id === DRIVER_ID);
-        setMyMoto(assigned || null);
-      } catch (err) {
-        console.error('Error fetching my moto', err);
-        setMyMoto(null);
-      }
-    };
-
-    const fetchMyOrders = async () => {
-      try {
-        const res = await axios.get(`${ORDER_API_BASE_URL}/orders`);
-        const all = Array.isArray(res.data) ? res.data : [];
-        const myOrders = all.filter(o => o.assigned_moto_id === myMoto?.id);
-        setOrders(myOrders);
-      } catch (err) {
-        console.error('Error fetching orders', err);
-        setOrders([]);
-      }
-    };
-
     const fetchData = async () => {
+      if (!driverId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      await fetchMyMoto();
-      await fetchMyOrders();
+      const moto = await fetchMyMoto();
+      await fetchMyOrders(moto);
       setLoading(false);
     };
 
@@ -49,7 +62,7 @@ const DriverDashboard = () => {
     // Poll every 30s for new orders/ETA
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, [myMoto?.id]);
+  }, [driverId, fetchMyMoto, fetchMyOrders]);
 
   useEffect(() => {
     const assignedOrInRoute = orders.filter(o => o.status === 'assigned' || o.status === 'in_route');
@@ -58,7 +71,7 @@ const DriverDashboard = () => {
         fetchETA(o.id);
       }
     });
-  }, [orders]);
+  }, [orders, etas]);
 
   const fetchETA = async (orderId) => {
     try {
@@ -129,9 +142,16 @@ const DriverDashboard = () => {
         <div className="dashboard-inner">
           <div className="dashboard-header">
             <h2 className="dashboard-title">Mi Dashboard</h2>
+            <div style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+              👤 {user?.name || user?.email} (ID: {driverId})
+            </div>
           </div>
           <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
-            No tienes una moto asignada. Contacta al administrador.
+            <p style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>🏍️ No tienes una moto asignada.</p>
+            <p>Contacta al administrador para que te asigne una moto.</p>
+            <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#6b7280' }}>
+              Tu ID de usuario: <strong>{driverId}</strong>
+            </p>
           </div>
         </div>
       </div>
@@ -144,8 +164,11 @@ const DriverDashboard = () => {
         <div className="dashboard-header">
           <h2 className="dashboard-title">Mi Dashboard</h2>
           <div style={{ color: '#9ca3af' }}>
-            Moto: <strong>{myMoto.license_plate}</strong> | Estado:{' '}
-            <span className={getStatusBadgeClass(myMoto.status)}>{myMoto.status}</span>
+            <div>👤 {user?.name || user?.email}</div>
+            <div>
+              Moto: <strong>{myMoto.license_plate}</strong> | Estado:{' '}
+              <span className={getStatusBadgeClass(myMoto.status)}>{myMoto.status}</span>
+            </div>
           </div>
         </div>
 

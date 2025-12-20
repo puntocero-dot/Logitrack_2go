@@ -88,16 +88,18 @@ const coordinatorIcon = L.divIcon({
     popupAnchor: [0, -22]
 });
 
-// Component to fit bounds when data changes
-function FitBounds({ markers }) {
+// Component to fit bounds ONLY on initial load
+function FitBounds({ markers, initialFitDone, setInitialFitDone }) {
     const map = useMap();
 
     useEffect(() => {
-        if (markers.length > 0) {
+        // Only fit bounds once on initial load
+        if (markers.length > 0 && !initialFitDone) {
             const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
             map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+            setInitialFitDone(true);
         }
-    }, [markers, map]);
+    }, [markers, map, initialFitDone, setInitialFitDone]);
 
     return null;
 }
@@ -107,6 +109,7 @@ const LiveMap = () => {
     const [orders, setOrders] = useState([]);
     const [branches, setBranches] = useState([]);
     const [coordinators, setCoordinators] = useState([]);
+    const [initialFitDone, setInitialFitDone] = useState(false);
     const [filters, setFilters] = useState({
         showMotos: true,
         showOrders: true,
@@ -281,7 +284,7 @@ const LiveMap = () => {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
-                    {allMarkers.length > 0 && <FitBounds markers={allMarkers} />}
+                    {allMarkers.length > 0 && <FitBounds markers={allMarkers} initialFitDone={initialFitDone} setInitialFitDone={setInitialFitDone} />}
 
                     {/* Route Lines */}
                     {routeLines.map((route, idx) => (

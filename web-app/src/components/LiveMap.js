@@ -1,30 +1,96 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Map, { Marker, Popup, Source, Layer, NavigationControl } from 'react-map-gl';
+import React, { useState, useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import axios from 'axios';
 import { ORDER_API_BASE_URL } from '../config/api';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import 'leaflet/dist/leaflet.css';
 
-// Token de Mapbox (usar variable de entorno en producción)
-const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN || 'pk.eyJ1IjoibG9naXRyYWNrIiwiYSI6ImNtNHJvOXBhZzBhMXYybG9jOGxkMGZyYTkifQ.placeholder';
+// Fix for default marker icons in React-Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom icons
+const createCustomIcon = (emoji, bgColor) => {
+    return L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="
+            background: ${bgColor};
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        ">${emoji}</div>`,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20]
+    });
+};
+
+const branchIcon = L.divIcon({
+    className: 'branch-marker',
+    html: `<div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 1.75rem;
+    ">🏢</div>`,
+    iconSize: [35, 35],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -17]
+});
+
+const orderIcon = (color) => L.divIcon({
+    className: 'order-marker',
+    html: `<div style="
+        width: 32px;
+        height: 32px;
+        background: #1f2937;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid ${color};
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    "><span style="transform: rotate(45deg); font-size: 1rem;">📦</span></div>`,
+    iconSize: [32, 40],
+    iconAnchor: [16, 40],
+    popupAnchor: [0, -35]
+});
+
+// Component to fit bounds when data changes
+function FitBounds({ markers }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (markers.length > 0) {
+            const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        }
+    }, [markers, map]);
+
+    return null;
+}
 
 const LiveMap = () => {
     const [motos, setMotos] = useState([]);
     const [orders, setOrders] = useState([]);
     const [branches, setBranches] = useState([]);
-    const [selectedMoto, setSelectedMoto] = useState(null);
-    const [selectedOrder, setSelectedOrder] = useState(null);
-    const [viewState, setViewState] = useState({
-        longitude: -90.5069,
-        latitude: 14.6349,
-        zoom: 12
-    });
     const [filters, setFilters] = useState({
         showMotos: true,
         showOrders: true,
         showBranches: true,
         statusFilter: 'all'
     });
-    const mapRef = useRef();
 
     const fetchData = useCallback(async () => {
         try {
@@ -43,7 +109,6 @@ const LiveMap = () => {
 
     useEffect(() => {
         fetchData();
-        // Auto-refresh cada 10 segundos
         const interval = setInterval(fetchData, 10000);
         return () => clearInterval(interval);
     }, [fetchData]);
@@ -69,37 +134,35 @@ const LiveMap = () => {
 
     const activeMotos = motos.filter(m => m.latitude && m.longitude);
 
-    // Líneas de rutas (moto -> pedido asignado)
+    // Route lines (moto -> assigned orders)
     const routeLines = [];
     activeMotos.forEach(moto => {
         const assignedOrders = filteredOrders.filter(o => o.assigned_moto_id === moto.id && o.latitude && o.longitude);
         assignedOrders.forEach(order => {
             routeLines.push({
-                type: 'Feature',
-                geometry: {
-                    type: 'LineString',
-                    coordinates: [
-                        [moto.longitude, moto.latitude],
-                        [order.longitude, order.latitude]
-                    ]
-                },
-                properties: {
-                    motoId: moto.id,
-                    orderId: order.id,
-                    status: order.status
-                }
+                positions: [
+                    [moto.latitude, moto.longitude],
+                    [order.latitude, order.longitude]
+                ],
+                motoId: moto.id,
+                orderId: order.id
             });
         });
     });
 
-    const routeGeoJSON = {
-        type: 'FeatureCollection',
-        features: routeLines
-    };
+    // Collect all markers for bounds
+    const allMarkers = [
+        ...activeMotos.map(m => ({ lat: m.latitude, lng: m.longitude })),
+        ...branches.filter(b => b.latitude && b.longitude).map(b => ({ lat: b.latitude, lng: b.longitude })),
+        ...filteredOrders.filter(o => o.latitude && o.longitude).map(o => ({ lat: o.latitude, lng: o.longitude }))
+    ];
+
+    // Default center (Guatemala City)
+    const defaultCenter = [14.6349, -90.5069];
 
     return (
         <div className="live-map-container">
-            {/* Panel de Filtros */}
+            {/* Control Panel */}
             <div className="map-controls">
                 <h3>🗺️ Mapa en Vivo</h3>
                 <div className="filter-group">
@@ -157,45 +220,49 @@ const LiveMap = () => {
                 </button>
             </div>
 
-            {/* Mapa */}
+            {/* Map */}
             <div className="map-wrapper">
-                <Map
-                    ref={mapRef}
-                    {...viewState}
-                    onMove={evt => setViewState(evt.viewState)}
+                <MapContainer
+                    center={defaultCenter}
+                    zoom={12}
                     style={{ width: '100%', height: '100%' }}
-                    mapStyle="mapbox://styles/mapbox/dark-v11"
-                    mapboxAccessToken={MAPBOX_TOKEN}
                 >
-                    <NavigationControl position="top-right" />
+                    <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
 
-                    {/* Líneas de ruta */}
-                    <Source id="routes" type="geojson" data={routeGeoJSON}>
-                        <Layer
-                            id="route-lines"
-                            type="line"
-                            paint={{
-                                'line-color': '#8b5cf6',
-                                'line-width': 2,
-                                'line-opacity': 0.7,
-                                'line-dasharray': [2, 2]
+                    {allMarkers.length > 0 && <FitBounds markers={allMarkers} />}
+
+                    {/* Route Lines */}
+                    {routeLines.map((route, idx) => (
+                        <Polyline
+                            key={`route-${idx}`}
+                            positions={route.positions}
+                            pathOptions={{
+                                color: '#8b5cf6',
+                                weight: 2,
+                                opacity: 0.7,
+                                dashArray: '5, 10'
                             }}
                         />
-                    </Source>
+                    ))}
 
-                    {/* Sucursales */}
+                    {/* Branches */}
                     {filters.showBranches && branches.map(branch => (
                         branch.latitude && branch.longitude && (
                             <Marker
                                 key={`branch-${branch.id}`}
-                                longitude={branch.longitude}
-                                latitude={branch.latitude}
-                                anchor="center"
+                                position={[branch.latitude, branch.longitude]}
+                                icon={branchIcon}
                             >
-                                <div className="branch-marker">
-                                    🏢
-                                    <span className="marker-label">{branch.code}</span>
-                                </div>
+                                <Popup>
+                                    <div className="map-popup">
+                                        <h4>🏢 {branch.name}</h4>
+                                        <p><strong>Código:</strong> {branch.code}</p>
+                                        <p><strong>Dirección:</strong> {branch.address || 'N/A'}</p>
+                                    </div>
+                                </Popup>
                             </Marker>
                         )
                     ))}
@@ -204,92 +271,45 @@ const LiveMap = () => {
                     {filters.showMotos && activeMotos.map(moto => (
                         <Marker
                             key={`moto-${moto.id}`}
-                            longitude={moto.longitude}
-                            latitude={moto.latitude}
-                            anchor="center"
-                            onClick={(e) => {
-                                e.originalEvent.stopPropagation();
-                                setSelectedMoto(moto);
-                                setSelectedOrder(null);
-                            }}
+                            position={[moto.latitude, moto.longitude]}
+                            icon={createCustomIcon('🏍️', getStatusColor(moto.status))}
                         >
-                            <div
-                                className="moto-marker"
-                                style={{
-                                    background: getStatusColor(moto.status),
-                                    animation: moto.status === 'in_route' ? 'pulse 1.5s infinite' : 'none'
-                                }}
-                            >
-                                🏍️
-                            </div>
+                            <Popup>
+                                <div className="map-popup">
+                                    <h4>🏍️ {moto.license_plate}</h4>
+                                    <p><strong>Estado:</strong> {moto.status}</p>
+                                    <p><strong>Capacidad:</strong> {moto.current_orders_count || 0}/{moto.max_orders_capacity || 5}</p>
+                                    {moto.is_transferred && (
+                                        <p className="transferred-badge">🔄 Transferida</p>
+                                    )}
+                                </div>
+                            </Popup>
                         </Marker>
                     ))}
 
-                    {/* Pedidos */}
+                    {/* Orders */}
                     {filters.showOrders && filteredOrders.map(order => (
                         order.latitude && order.longitude && (
                             <Marker
                                 key={`order-${order.id}`}
-                                longitude={order.longitude}
-                                latitude={order.latitude}
-                                anchor="bottom"
-                                onClick={(e) => {
-                                    e.originalEvent.stopPropagation();
-                                    setSelectedOrder(order);
-                                    setSelectedMoto(null);
-                                }}
+                                position={[order.latitude, order.longitude]}
+                                icon={orderIcon(getStatusColor(order.status))}
                             >
-                                <div
-                                    className="order-marker"
-                                    style={{ borderColor: getStatusColor(order.status) }}
-                                >
-                                    📦
-                                </div>
+                                <Popup>
+                                    <div className="map-popup">
+                                        <h4>📦 Pedido #{order.id}</h4>
+                                        <p><strong>Cliente:</strong> {order.client_name}</p>
+                                        <p><strong>Estado:</strong> {order.status}</p>
+                                        <p><strong>Dirección:</strong> {order.address}</p>
+                                        {order.assigned_moto_id && (
+                                            <p><strong>Moto:</strong> #{order.assigned_moto_id}</p>
+                                        )}
+                                    </div>
+                                </Popup>
                             </Marker>
                         )
                     ))}
-
-                    {/* Popup Moto */}
-                    {selectedMoto && (
-                        <Popup
-                            longitude={selectedMoto.longitude}
-                            latitude={selectedMoto.latitude}
-                            anchor="bottom"
-                            onClose={() => setSelectedMoto(null)}
-                            closeButton={true}
-                        >
-                            <div className="map-popup">
-                                <h4>🏍️ {selectedMoto.license_plate}</h4>
-                                <p><strong>Estado:</strong> {selectedMoto.status}</p>
-                                <p><strong>Capacidad:</strong> {selectedMoto.current_orders_count || 0}/{selectedMoto.max_orders_capacity || 5}</p>
-                                {selectedMoto.is_transferred && (
-                                    <p className="transferred-badge">🔄 Transferida</p>
-                                )}
-                            </div>
-                        </Popup>
-                    )}
-
-                    {/* Popup Pedido */}
-                    {selectedOrder && (
-                        <Popup
-                            longitude={selectedOrder.longitude}
-                            latitude={selectedOrder.latitude}
-                            anchor="bottom"
-                            onClose={() => setSelectedOrder(null)}
-                            closeButton={true}
-                        >
-                            <div className="map-popup">
-                                <h4>📦 Pedido #{selectedOrder.id}</h4>
-                                <p><strong>Cliente:</strong> {selectedOrder.client_name}</p>
-                                <p><strong>Estado:</strong> {selectedOrder.status}</p>
-                                <p><strong>Dirección:</strong> {selectedOrder.address}</p>
-                                {selectedOrder.assigned_moto_id && (
-                                    <p><strong>Moto:</strong> #{selectedOrder.assigned_moto_id}</p>
-                                )}
-                            </div>
-                        </Popup>
-                    )}
-                </Map>
+                </MapContainer>
             </div>
 
             <style>{`
@@ -362,78 +382,20 @@ const LiveMap = () => {
           position: relative;
         }
 
-        .moto-marker {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.25rem;
-          cursor: pointer;
-          border: 3px solid white;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-          transition: transform 0.2s;
-        }
-
-        .moto-marker:hover {
-          transform: scale(1.2);
-        }
-
-        @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
-          70% { box-shadow: 0 0 0 15px rgba(139, 92, 246, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
-        }
-
-        .order-marker {
-          width: 36px;
-          height: 36px;
-          background: #1f2937;
-          border-radius: 50% 50% 50% 0;
-          transform: rotate(-45deg);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 3px solid;
-          cursor: pointer;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        }
-
-        .order-marker span,
-        .order-marker::before {
-          transform: rotate(45deg);
-        }
-
-        .branch-marker {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          font-size: 1.5rem;
-        }
-
-        .marker-label {
-          background: rgba(0,0,0,0.7);
-          color: white;
-          padding: 0.25rem 0.5rem;
-          border-radius: 4px;
-          font-size: 0.7rem;
-          margin-top: 0.25rem;
-        }
-
         .map-popup {
-          color: #1f2937;
           min-width: 180px;
         }
 
         .map-popup h4 {
           margin: 0 0 0.5rem 0;
           font-size: 1rem;
+          color: #1f2937;
         }
 
         .map-popup p {
           margin: 0.25rem 0;
           font-size: 0.85rem;
+          color: #374151;
         }
 
         .transferred-badge {
@@ -442,16 +404,20 @@ const LiveMap = () => {
           padding: 0.25rem 0.5rem;
           border-radius: 4px;
           font-size: 0.75rem;
+          display: inline-block;
         }
 
-        .mapboxgl-popup-content {
+        .custom-marker {
+          background: none;
+          border: none;
+        }
+
+        .leaflet-popup-content-wrapper {
           border-radius: 12px;
-          padding: 1rem;
         }
 
-        .mapboxgl-popup-close-button {
-          font-size: 1.25rem;
-          padding: 0.5rem;
+        .leaflet-popup-content {
+          margin: 0.75rem 1rem;
         }
       `}</style>
         </div>

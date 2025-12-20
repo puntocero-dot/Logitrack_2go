@@ -326,18 +326,27 @@ const CoordinatorDashboard = () => {
                                         ))}
                                     </select>
 
-                                    <div className="form-card" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span>📍</span>
-                                            {location ? (
-                                                <span>
-                                                    GPS: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-                                                </span>
-                                            ) : (
-                                                <span style={{ color: '#f59e0b' }}>Obteniendo ubicación...</span>
-                                            )}
-                                            <button className="btn btn-secondary" onClick={getLocation}>
-                                                🔄
+                                    <div className="form-card" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <span style={{ fontSize: '1.5rem' }}>📍</span>
+                                                {location ? (
+                                                    <div>
+                                                        <div style={{ fontWeight: '500', color: '#10b981' }}>Ubicación GPS activa</div>
+                                                        <div style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
+                                                            {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ color: '#f59e0b' }}>Obteniendo ubicación...</div>
+                                                )}
+                                            </div>
+                                            <button 
+                                                className="btn btn-secondary" 
+                                                onClick={getLocation}
+                                                style={{ padding: '0.5rem 1rem' }}
+                                            >
+                                                🔄 Actualizar
                                             </button>
                                         </div>
                                     </div>

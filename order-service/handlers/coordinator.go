@@ -199,6 +199,7 @@ func GetVisitHistory(c *gin.Context) {
 	query := `
 		SELECT cv.id, cv.coordinator_id, u.name, cv.branch_id, b.name, 
 		       cv.check_in_time, cv.check_out_time, cv.status, cv.notes,
+		       cv.check_in_latitude, cv.check_in_longitude, cv.distance_to_branch_meters,
 		       EXTRACT(EPOCH FROM (COALESCE(cv.check_out_time, CURRENT_TIMESTAMP) - cv.check_in_time))/60 as duration
 		FROM coordinator_visits cv
 		JOIN branches b ON b.id = cv.branch_id
@@ -235,9 +236,11 @@ func GetVisitHistory(c *gin.Context) {
 		var checkOut sql.NullTime
 		var coordName, notes sql.NullString
 		var duration sql.NullFloat64
+		var lat, lng sql.NullFloat64
+		var distanceMeters sql.NullInt64
 
 		err := rows.Scan(&v.ID, &v.CoordinatorID, &coordName, &v.BranchID, &v.BranchName,
-			&v.CheckInTime, &checkOut, &v.Status, &notes, &duration)
+			&v.CheckInTime, &checkOut, &v.Status, &notes, &lat, &lng, &distanceMeters, &duration)
 		if err != nil {
 			continue
 		}
@@ -254,6 +257,16 @@ func GetVisitHistory(c *gin.Context) {
 		if duration.Valid {
 			d := int(duration.Float64)
 			v.Duration = &d
+		}
+		if lat.Valid {
+			v.CheckInLatitude = &lat.Float64
+		}
+		if lng.Valid {
+			v.CheckInLongitude = &lng.Float64
+		}
+		if distanceMeters.Valid {
+			dm := int(distanceMeters.Int64)
+			v.DistanceToBranchMeters = &dm
 		}
 
 		visits = append(visits, v)

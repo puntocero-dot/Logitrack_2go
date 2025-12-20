@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { ORDER_API_BASE_URL } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 
 const CoordinatorDashboard = () => {
+    const { user } = useAuth();
     const [activeVisit, setActiveVisit] = useState(null);
     const [branches, setBranches] = useState([]);
     const [checklistTemplates, setChecklistTemplates] = useState([]);
@@ -14,6 +16,9 @@ const CoordinatorDashboard = () => {
     const [message, setMessage] = useState({ type: '', text: '' });
     const [loading, setLoading] = useState(false);
     const [view, setView] = useState('main'); // main, checklist, history
+
+    // Get coordinator ID from logged-in user
+    const coordinatorId = user?.id;
 
     // Obtener ubicación GPS
     const getLocation = useCallback(() => {
@@ -36,10 +41,12 @@ const CoordinatorDashboard = () => {
     useEffect(() => {
         getLocation();
         fetchBranches();
-        fetchActiveVisit();
+        if (coordinatorId) {
+            fetchActiveVisit();
+            fetchVisitHistory();
+        }
         fetchChecklistTemplates();
-        fetchVisitHistory();
-    }, [getLocation]);
+    }, [getLocation, coordinatorId]);
 
     const fetchBranches = async () => {
         try {
@@ -51,8 +58,9 @@ const CoordinatorDashboard = () => {
     };
 
     const fetchActiveVisit = async () => {
+        if (!coordinatorId) return;
         try {
-            const res = await axios.get(`${ORDER_API_BASE_URL}/visits/active`);
+            const res = await axios.get(`${ORDER_API_BASE_URL}/visits/active?coordinator_id=${coordinatorId}`);
             setActiveVisit(res.data.active_visit);
             if (res.data.active_visit) {
                 fetchVisitChecklist(res.data.active_visit.id);
@@ -72,8 +80,9 @@ const CoordinatorDashboard = () => {
     };
 
     const fetchVisitHistory = async () => {
+        if (!coordinatorId) return;
         try {
-            const res = await axios.get(`${ORDER_API_BASE_URL}/visits?limit=20`);
+            const res = await axios.get(`${ORDER_API_BASE_URL}/visits?coordinator_id=${coordinatorId}&limit=20`);
             setVisitHistory(res.data || []);
         } catch (err) {
             console.error('Error fetching history', err);
@@ -103,10 +112,14 @@ const CoordinatorDashboard = () => {
             getLocation();
             return;
         }
+        if (!coordinatorId) {
+            setMessage({ type: 'error', text: 'Error: Usuario no identificado' });
+            return;
+        }
 
         setLoading(true);
         try {
-            await axios.post(`${ORDER_API_BASE_URL}/visits/check-in`, {
+            await axios.post(`${ORDER_API_BASE_URL}/visits/check-in?coordinator_id=${coordinatorId}`, {
                 branch_id: parseInt(selectedBranch),
                 latitude: location.latitude,
                 longitude: location.longitude,
@@ -199,6 +212,9 @@ const CoordinatorDashboard = () => {
             <div className="dashboard-inner">
                 <div className="dashboard-header">
                     <h2 className="dashboard-title">📋 Panel de Coordinador</h2>
+                    <div className="coordinator-info" style={{ fontSize: '0.9rem', color: '#9ca3af' }}>
+                        👤 {user?.name || user?.email || 'Coordinador'} (ID: {coordinatorId})
+                    </div>
                     <div className="metrics-row">
                         <button
                             className={`btn ${view === 'main' ? 'btn-primary' : 'btn-secondary'}`}
@@ -341,8 +357,8 @@ const CoordinatorDashboard = () => {
                                                     <div style={{ color: '#f59e0b' }}>Obteniendo ubicación...</div>
                                                 )}
                                             </div>
-                                            <button 
-                                                className="btn btn-secondary" 
+                                            <button
+                                                className="btn btn-secondary"
                                                 onClick={getLocation}
                                                 style={{ padding: '0.5rem 1rem' }}
                                             >
@@ -375,6 +391,9 @@ const CoordinatorDashboard = () => {
                 {view === 'history' && (
                     <div className="table-wrapper">
                         <h3>📜 Historial de Visitas</h3>
+                        <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '1rem' }}>
+                            Mostrando visitas de: {user?.name || user?.email}
+                        </p>
                         <table className="data-table">
                             <thead>
                                 <tr>

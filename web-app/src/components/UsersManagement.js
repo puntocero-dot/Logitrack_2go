@@ -52,8 +52,8 @@ const UsersManagement = () => {
 
   const fetchBranches = async () => {
     try {
-      const API_BASE_URL = USER_API_BASE_URL.replace('/api', '');
-      const res = await axios.get(`${API_BASE_URL}/api/branches`);
+      // Branches endpoint is at /branches via the gateway
+      const res = await axios.get(`${USER_API_BASE_URL}/branches`);
       setBranches(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Error fetching branches', err);

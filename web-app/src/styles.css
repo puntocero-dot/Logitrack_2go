@@ -84,7 +84,7 @@ body {
   transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
 }
 
-.btn + .btn {
+.btn+.btn {
   margin-left: 8px;
 }
 
@@ -404,10 +404,125 @@ body {
 
 @media (max-width: 768px) {
   .dashboard-shell {
-    padding: 16px;
+    padding: 12px;
   }
 
   .dashboard-inner {
-    padding: 16px;
+    padding: 16px 12px;
+    border-radius: 16px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .dashboard-title {
+    font-size: 18px;
+  }
+
+  .metrics-row {
+    gap: 8px;
+  }
+
+  .metric-card {
+    min-width: 80px;
+    padding: 8px 10px;
+  }
+
+  .metric-label {
+    font-size: 10px;
+  }
+
+  .metric-value {
+    font-size: 16px;
+  }
+
+  .form-card {
+    padding: 12px;
+  }
+
+  .form-card h3 {
+    font-size: 14px;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 6px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .btn {
+    padding: 12px 18px;
+    font-size: 0.9rem;
+    min-height: 44px;
+    /* Better touch target */
+  }
+
+  .form-input,
+  .form-select {
+    padding: 12px;
+    font-size: 16px;
+    /* Prevent zoom on iOS */
+    min-height: 44px;
+  }
+
+  .select-status {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .auth-card {
+    padding: 24px 20px;
+    margin: 16px;
+  }
+
+  .auth-title {
+    font-size: 22px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .dashboard-shell {
+    padding: 8px;
+  }
+
+  .dashboard-inner {
+    padding: 12px 8px;
+    border-radius: 12px;
+  }
+
+  .metrics-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  .metric-card {
+    flex: 0 0 auto;
+    min-width: 100px;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-success {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .form-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 }

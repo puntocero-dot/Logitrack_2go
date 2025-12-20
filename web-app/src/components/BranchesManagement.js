@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './BranchesManagement.css';
+import BulkUpload from './BulkUpload';
 
 // Fix for default marker icons in React-Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -312,9 +313,47 @@ const BranchesManagement = () => {
                     <h1>🏢 Gestión de Sucursales</h1>
                     <p>Administra las sucursales y puntos de operación</p>
                 </div>
-                <button className="btn-add" onClick={() => setShowForm(!showForm)}>
-                    {showForm ? '✕ Cerrar' : '+ Nueva Sucursal'}
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <BulkUpload
+                        entityName="sucursales"
+                        templateColumns={['name', 'code', 'address', 'latitude', 'longitude', 'radius_km']}
+                        templateExample={['Sucursal Centro', 'SUC-001', 'Av. Principal 123', '14.6349', '-90.5069', '10']}
+                        duplicateKey="code"
+                        onUpload={async (data) => {
+                            let success = 0;
+                            let duplicates = 0;
+                            const errors = [];
+                            const existingCodes = branches.map(b => b.code?.toLowerCase());
+
+                            for (let i = 0; i < data.length; i++) {
+                                const row = data[i];
+                                if (existingCodes.includes(row.code?.toLowerCase())) {
+                                    duplicates++;
+                                    continue;
+                                }
+                                try {
+                                    await axios.post(`${API_BASE_URL}/branches`, {
+                                        name: row.name,
+                                        code: row.code?.toUpperCase(),
+                                        address: row.address,
+                                        latitude: parseFloat(row.latitude) || 0,
+                                        longitude: parseFloat(row.longitude) || 0,
+                                        radius_km: parseFloat(row.radius_km) || 10,
+                                        is_active: true
+                                    });
+                                    success++;
+                                } catch (err) {
+                                    errors.push({ row: i + 2, message: err.response?.data?.error || err.message });
+                                }
+                            }
+                            fetchBranches();
+                            return { success, duplicates, errors };
+                        }}
+                    />
+                    <button className="btn-add" onClick={() => setShowForm(!showForm)}>
+                        {showForm ? '✕ Cerrar' : '+ Nueva Sucursal'}
+                    </button>
+                </div>
             </div>
 
             {message.text && (

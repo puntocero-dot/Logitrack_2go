@@ -3,6 +3,7 @@ import axios from 'axios';
 import { USER_API_BASE_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import './UsersManagement.css';
+import BulkUpload from './BulkUpload';
 
 const UsersManagement = () => {
   const { user: currentUser } = useAuth();
@@ -206,9 +207,46 @@ const UsersManagement = () => {
           <h1>👥 Gestión de Usuarios</h1>
           <p>Administra usuarios, roles y permisos del sistema</p>
         </div>
-        <button className="btn-add" onClick={() => setShowForm(!showForm)}>
-          {showForm ? '✕ Cerrar' : '+ Nuevo Usuario'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <BulkUpload
+            entityName="usuarios"
+            templateColumns={['name', 'email', 'password', 'role', 'branch_id']}
+            templateExample={['Juan Pérez', 'juan@email.com', 'password123', 'driver', '1']}
+            duplicateKey="email"
+            onUpload={async (data) => {
+              let success = 0;
+              let duplicates = 0;
+              const errors = [];
+              const existingEmails = users.map(u => u.email?.toLowerCase());
+
+              for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                if (existingEmails.includes(row.email?.toLowerCase())) {
+                  duplicates++;
+                  continue;
+                }
+                try {
+                  await axios.post(`${USER_API_BASE_URL}/register`, {
+                    name: row.name,
+                    email: row.email,
+                    password: row.password || 'Temp123!',
+                    role: row.role || 'operator',
+                    branch_id: row.branch_id ? parseInt(row.branch_id) : null,
+                    active: true
+                  });
+                  success++;
+                } catch (err) {
+                  errors.push({ row: i + 2, message: err.response?.data?.error || err.message });
+                }
+              }
+              fetchUsers();
+              return { success, duplicates, errors };
+            }}
+          />
+          <button className="btn-add" onClick={() => setShowForm(!showForm)}>
+            {showForm ? '✕ Cerrar' : '+ Nuevo Usuario'}
+          </button>
+        </div>
       </div>
 
       {message.text && (

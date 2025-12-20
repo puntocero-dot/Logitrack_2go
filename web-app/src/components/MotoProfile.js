@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { ORDER_API_BASE_URL, AUTH_API_BASE_URL } from '../config/api';
+import { ORDER_API_BASE_URL, USER_API_BASE_URL } from '../config/api';
 
 const MotoProfile = () => {
   const { id } = useParams();
   const motoId = id;
   const [moto, setMoto] = useState(null);
+  const [allMotos, setAllMotos] = useState([]);
   const [driver, setDriver] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ driver_id: '' });
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!motoId) return;
@@ -21,19 +23,26 @@ const MotoProfile = () => {
 
   const fetchData = async () => {
     try {
-      const [motoRes, ordersRes, usersRes] = await Promise.all([
+      const [motoRes, ordersRes, usersRes, motosRes] = await Promise.all([
         axios.get(`${ORDER_API_BASE_URL}/motos/${motoId}`),
         axios.get(`${ORDER_API_BASE_URL}/orders?assigned_moto_id=${motoId}`),
-        axios.get(`${AUTH_API_BASE_URL}/users?role=driver`),
+        axios.get(`${USER_API_BASE_URL}/users`),
+        axios.get(`${ORDER_API_BASE_URL}/motos`),
       ]);
       const motoData = motoRes.data;
       setMoto(motoData);
       setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
-      setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+      setAllMotos(Array.isArray(motosRes.data) ? motosRes.data : []);
+
+      // Filter only users with role 'driver' and active
+      const allUsers = Array.isArray(usersRes.data) ? usersRes.data : [];
+      const driverUsers = allUsers.filter(u => u.role === 'driver' && u.active !== false);
+      setDrivers(driverUsers);
+
       setForm({ driver_id: motoData.driver_id || '' });
       if (motoData.driver_id) {
-        const driverRes = await axios.get(`${AUTH_API_BASE_URL}/users/${motoData.driver_id}`);
-        setDriver(driverRes.data);
+        const driverUser = allUsers.find(u => u.id === motoData.driver_id);
+        setDriver(driverUser || null);
       }
     } catch (err) {
       console.error('Error fetching moto data', err);
@@ -42,16 +51,39 @@ const MotoProfile = () => {
     }
   };
 
+  // Check if a driver is already assigned to another moto
+  const isDriverAssigned = (driverId) => {
+    if (!driverId) return false;
+    const assignedMoto = allMotos.find(m => m.driver_id === parseInt(driverId) && m.id !== parseInt(motoId));
+    return assignedMoto !== undefined;
+  };
+
+  const getAssignedMotoPlate = (driverId) => {
+    if (!driverId) return null;
+    const assignedMoto = allMotos.find(m => m.driver_id === parseInt(driverId) && m.id !== parseInt(motoId));
+    return assignedMoto ? assignedMoto.license_plate : null;
+  };
+
   const handleAssignDriver = async (e) => {
     e.preventDefault();
+    setMessage('');
+
+    // Validate driver is not already assigned to another moto
+    if (form.driver_id && isDriverAssigned(form.driver_id)) {
+      const plate = getAssignedMotoPlate(form.driver_id);
+      setMessage(`❌ Este conductor ya está asignado a la moto ${plate}`);
+      return;
+    }
+
     try {
       await axios.put(`${ORDER_API_BASE_URL}/motos/${motoId}`, {
         driver_id: form.driver_id ? parseInt(form.driver_id, 10) : null,
       });
+      setMessage('✅ Conductor asignado correctamente');
       setEditing(false);
       fetchData();
     } catch (err) {
-      console.error('Error assigning driver', err);
+      setMessage('❌ Error: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -116,6 +148,12 @@ const MotoProfile = () => {
           <h2 className="dashboard-title">Perfil de Moto</h2>
         </div>
 
+        {message && (
+          <div className={`alert ${message.includes('❌') ? 'alert--error' : 'alert--success'}`}>
+            {message}
+          </div>
+        )}
+
         <div className="profile-card">
           <div className="profile-header">
             <div>
@@ -136,12 +174,27 @@ const MotoProfile = () => {
                 style={{ flex: 1 }}
               >
                 <option value="">Sin driver</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                ))}
+                {drivers.map(u => {
+                  const alreadyAssigned = isDriverAssigned(u.id);
+                  return (
+                    <option
+                      key={u.id}
+                      value={u.id}
+                      disabled={alreadyAssigned}
+                    >
+                      {u.name || u.email} {alreadyAssigned ? `(Asignado a ${getAssignedMotoPlate(u.id)})` : ''}
+                    </option>
+                  );
+                })}
               </select>
               <button type="submit" className="btn btn-primary">Guardar</button>
             </form>
+          )}
+
+          {drivers.length === 0 && editing && (
+            <p style={{ color: '#f59e0b', marginTop: '0.5rem', fontSize: '0.9rem' }}>
+              ⚠️ No hay usuarios con rol "driver" activos. Crea usuarios con rol driver en la sección Usuarios.
+            </p>
           )}
 
           <div className="profile-info">
@@ -155,7 +208,7 @@ const MotoProfile = () => {
             </div>
             <div className="info-row">
               <span className="info-label">Sucursal:</span>
-              <span>{driver?.branch || '-'}</span>
+              <span>{moto.branch_name || moto.branch_id || '-'}</span>
             </div>
           </div>
         </div>

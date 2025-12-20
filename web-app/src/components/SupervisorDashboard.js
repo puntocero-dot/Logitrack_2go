@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { ORDER_API_BASE_URL } from '../config/api';
 import MapView from './MapView';
+import BulkUpload from './BulkUpload';
 
 const SupervisorDashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -37,29 +38,29 @@ const SupervisorDashboard = () => {
     };
 
     const fetchMotos = async () => {
-    try {
-      const res = await axios.get(`${ORDER_API_BASE_URL}/motos`);
-      const data = Array.isArray(res.data) ? res.data : [];
-      setMotos(data);
-    } catch (err) {
-      console.error('Error fetching motos', err);
-      setMotos([]);
-    }
-  };
+      try {
+        const res = await axios.get(`${ORDER_API_BASE_URL}/motos`);
+        const data = Array.isArray(res.data) ? res.data : [];
+        setMotos(data);
+      } catch (err) {
+        console.error('Error fetching motos', err);
+        setMotos([]);
+      }
+    };
 
-  const fetchMotoKPIs = async () => {
-    try {
-      const res = await axios.get(`${ORDER_API_BASE_URL}/kpis/motos`);
-      setMotoKPIs(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error('Error fetching moto KPIs', err);
-      setMotoKPIs([]);
-    }
-  };
+    const fetchMotoKPIs = async () => {
+      try {
+        const res = await axios.get(`${ORDER_API_BASE_URL}/kpis/motos`);
+        setMotoKPIs(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error('Error fetching moto KPIs', err);
+        setMotoKPIs([]);
+      }
+    };
 
-  fetchOrders();
-  fetchMotos();
-  fetchMotoKPIs();
+    fetchOrders();
+    fetchMotos();
+    fetchMotoKPIs();
   }, []);
 
   const handleOrderChange = (e) => {
@@ -221,7 +222,48 @@ const SupervisorDashboard = () => {
         )}
 
         <div className="form-card" style={{ marginBottom: 20 }}>
-          <h3>Crear Pedido</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0 }}>Crear Pedido</h3>
+            <BulkUpload
+              entityName="pedidos"
+              templateColumns={['client_name', 'client_email', 'address', 'latitude', 'longitude']}
+              templateExample={['Juan Pérez', 'juan@email.com', 'Av. Principal 123', '14.6349', '-90.5069']}
+              duplicateKey="address"
+              onUpload={async (data) => {
+                let success = 0;
+                let duplicates = 0;
+                const errors = [];
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const branch = user.role === 'supervisor' ? user.branch : 'central';
+                const existingAddresses = orders.map(o => o.address?.toLowerCase());
+
+                for (let i = 0; i < data.length; i++) {
+                  const row = data[i];
+                  if (existingAddresses.includes(row.address?.toLowerCase())) {
+                    duplicates++;
+                    continue;
+                  }
+                  try {
+                    const res = await axios.post(`${ORDER_API_BASE_URL}/orders`, {
+                      client_name: row.client_name || 'Cliente sin nombre',
+                      client_email: row.client_email || null,
+                      address: row.address || 'Sin dirección',
+                      latitude: parseFloat(row.latitude) || 14.6349,
+                      longitude: parseFloat(row.longitude) || -90.5069,
+                      branch
+                    });
+                    success++;
+                  } catch (err) {
+                    errors.push({ row: i + 2, message: err.response?.data?.error || err.message });
+                  }
+                }
+                // Refresh orders
+                const ordersRes = await axios.get(`${ORDER_API_BASE_URL}/orders`);
+                setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
+                return { success, duplicates, errors };
+              }}
+            />
+          </div>
           <form onSubmit={handleCreateOrder} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
             <input
               type="text"
@@ -396,7 +438,7 @@ const SupervisorDashboard = () => {
                                   status: o.status === 'pending' ? 'assigned' : o.status,
                                 }
                                 : o
-                              )
+                            )
                           );
                         } catch (err) {
                           console.error('Error assigning moto', err);
@@ -503,6 +545,6 @@ const SupervisorDashboard = () => {
     </div>
   );
 }
-;
+  ;
 
 export default SupervisorDashboard;

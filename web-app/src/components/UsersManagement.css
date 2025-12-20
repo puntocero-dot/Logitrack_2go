@@ -128,6 +128,33 @@
   color: #6b7280;
 }
 
+/* Fix for dropdown option visibility */
+.form-group select option {
+  background: #1a1a3e;
+  color: #fff;
+  padding: 0.5rem;
+}
+
+.form-group select option:hover,
+.form-group select option:focus,
+.form-group select option:checked {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.filter-group select option {
+  background: #1a1a3e;
+  color: #fff;
+  padding: 0.5rem;
+}
+
+.filter-group select option:hover,
+.filter-group select option:focus,
+.filter-group select option:checked {
+  background: #3b82f6;
+  color: #fff;
+}
+
 .checkbox-group {
   justify-content: center;
 }

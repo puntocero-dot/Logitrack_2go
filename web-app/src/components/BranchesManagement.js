@@ -1,12 +1,49 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-import Map, { Marker, NavigationControl } from 'react-map-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import './BranchesManagement.css';
 
+// Fix for default marker icons in React-Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker icon
+const locationIcon = L.divIcon({
+    className: 'custom-marker',
+    html: `<div style="font-size: 2rem;">📍</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30]
+});
+
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api-gateway-production-ad21.up.railway.app';
-// Fallback token si no está en variables de entorno
-const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN || 'pk.eyJ1IjoibG9naXRyYWNrIiwiYSI6ImNtNHJvOXBhZzBhMXYybG9qMGxkMGZyYTkifQ.fmeq3YAtxTW94Y3083nAdw';
+
+// Component to handle map clicks
+function MapClickHandler({ onMapClick }) {
+    useMapEvents({
+        click: (e) => {
+            onMapClick(e.latlng.lat, e.latlng.lng);
+        }
+    });
+    return null;
+}
+
+// Component to recenter map when location changes
+function MapRecenter({ lat, lng }) {
+    const map = useMap();
+    useEffect(() => {
+        if (lat && lng) {
+            map.setView([lat, lng], 15);
+        }
+    }, [lat, lng, map]);
+    return null;
+}
 
 const BranchesManagement = () => {
     const [branches, setBranches] = useState([]);
@@ -28,12 +65,10 @@ const BranchesManagement = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [showMap, setShowMap] = useState(false);
-    const [mapViewState, setMapViewState] = useState({
-        longitude: -90.5069,
-        latitude: 14.6349,
-        zoom: 12
-    });
     const debounceRef = useRef(null);
+
+    // Default center (Guatemala City)
+    const defaultCenter = [14.6349, -90.5069];
 
     useEffect(() => {
         fetchBranches();
@@ -122,16 +157,10 @@ const BranchesManagement = () => {
         });
         setShowSuggestions(false);
         setAddressSuggestions([]);
-        // Centrar mapa en la ubicación seleccionada
-        setMapViewState({ longitude: lng, latitude: lat, zoom: 15 });
     };
 
     // Click en el mapa para seleccionar ubicación
-    const handleMapClick = useCallback(async (event) => {
-        const { lngLat } = event;
-        const lat = lngLat.lat;
-        const lng = lngLat.lng;
-
+    const handleMapClick = useCallback(async (lat, lng) => {
         setForm(prev => ({
             ...prev,
             latitude: lat.toFixed(6),
@@ -257,6 +286,14 @@ const BranchesManagement = () => {
         return true;
     });
 
+    // Get map center based on form values or default
+    const getMapCenter = () => {
+        if (form.latitude && form.longitude) {
+            return [parseFloat(form.latitude), parseFloat(form.longitude)];
+        }
+        return defaultCenter;
+    };
+
     if (loading) {
         return (
             <div className="branches-management">
@@ -343,30 +380,34 @@ const BranchesManagement = () => {
                             </button>
                         </div>
 
-                        {/* Mapa interactivo */}
+                        {/* Mapa interactivo con Leaflet */}
                         {showMap && (
                             <div className="map-picker-container">
                                 <p className="map-hint">👆 Haz clic en el mapa para seleccionar la ubicación</p>
                                 <div className="map-picker">
-                                    <Map
-                                        {...mapViewState}
-                                        onMove={evt => setMapViewState(evt.viewState)}
-                                        onClick={handleMapClick}
+                                    <MapContainer
+                                        center={getMapCenter()}
+                                        zoom={12}
                                         style={{ width: '100%', height: '300px' }}
-                                        mapStyle="mapbox://styles/mapbox/dark-v11"
-                                        mapboxAccessToken={MAPBOX_TOKEN}
                                     >
-                                        <NavigationControl position="top-right" />
+                                        <TileLayer
+                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        />
+                                        <MapClickHandler onMapClick={handleMapClick} />
                                         {form.latitude && form.longitude && (
-                                            <Marker
-                                                longitude={parseFloat(form.longitude)}
-                                                latitude={parseFloat(form.latitude)}
-                                                anchor="bottom"
-                                            >
-                                                <div className="map-marker">📍</div>
-                                            </Marker>
+                                            <>
+                                                <MapRecenter
+                                                    lat={parseFloat(form.latitude)}
+                                                    lng={parseFloat(form.longitude)}
+                                                />
+                                                <Marker
+                                                    position={[parseFloat(form.latitude), parseFloat(form.longitude)]}
+                                                    icon={locationIcon}
+                                                />
+                                            </>
                                         )}
-                                    </Map>
+                                    </MapContainer>
                                 </div>
                             </div>
                         )}

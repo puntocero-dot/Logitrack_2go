@@ -124,25 +124,34 @@ func UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	var req validation.UpdateOrderStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
+	// Try to get status from query param first, then JSON body
+	status := c.Query("status")
+	if status == "" {
+		var req validation.UpdateOrderStatusRequest
+		if err := c.ShouldBindJSON(&req); err == nil {
+			status = req.Status
+		}
+	}
+
+	if status == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Status is required"})
 		return
 	}
 
-	// Validar status
-	if err := validation.Validate(req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Validate status value
+	validStatuses := map[string]bool{"pending": true, "assigned": true, "in_route": true, "delivered": true, "cancelled": true}
+	if !validStatuses[status] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status value"})
 		return
 	}
 
-	_, err = db.Exec("UPDATE orders SET status = $1 WHERE id = $2", req.Status, id)
+	_, err = db.Exec("UPDATE orders SET status = $1 WHERE id = $2", status, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Order status updated", "status": req.Status})
+	c.JSON(http.StatusOK, gin.H{"message": "Order status updated", "status": status})
 }
 
 func AssignOrderToMoto(c *gin.Context) {
@@ -152,21 +161,32 @@ func AssignOrderToMoto(c *gin.Context) {
 		return
 	}
 
-	var req validation.AssignMotoRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
-		return
+	// Try to get moto_id from query param first, then JSON body
+	motoIDStr := c.Query("moto_id")
+	var motoID int
+	if motoIDStr != "" {
+		motoID, err = strconv.Atoi(motoIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid moto_id"})
+			return
+		}
+	} else {
+		var req validation.AssignMotoRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "moto_id is required"})
+			return
+		}
+		motoID = req.MotoID
 	}
 
-	// Validar moto_id
-	if err := validation.Validate(req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if motoID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "moto_id is required"})
 		return
 	}
 
 	// Verificar que la moto existe
 	var dummy int
-	err = db.QueryRow("SELECT id FROM motos WHERE id = $1", req.MotoID).Scan(&dummy)
+	err = db.QueryRow("SELECT id FROM motos WHERE id = $1", motoID).Scan(&dummy)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Moto not found"})
 		return
@@ -177,7 +197,7 @@ func AssignOrderToMoto(c *gin.Context) {
 	}
 
 	// Asignar moto al pedido
-	res, err := db.Exec("UPDATE orders SET assigned_moto_id = $1, status = CASE WHEN status = 'pending' THEN 'assigned' ELSE status END WHERE id = $2", req.MotoID, id)
+	res, err := db.Exec("UPDATE orders SET assigned_moto_id = $1, status = CASE WHEN status = 'pending' THEN 'assigned' ELSE status END WHERE id = $2", motoID, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign order"})
 		return

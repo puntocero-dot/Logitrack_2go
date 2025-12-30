@@ -506,6 +506,56 @@ const LiveMap = () => {
           70% { box-shadow: 0 0 0 15px rgba(6, 182, 212, 0); }
           100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
         }
+
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+          .live-map-container {
+            flex-direction: column;
+            height: 100vh;
+          }
+
+          .map-controls {
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            border-right: none;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 1rem;
+          }
+
+          .map-controls h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+          }
+
+          .filter-group {
+            margin-bottom: 0.75rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          }
+
+          .filter-group label {
+            font-size: 0.85rem;
+            margin-bottom: 0;
+          }
+
+          .map-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          }
+
+          .legend-item {
+            font-size: 0.75rem;
+            margin-bottom: 0;
+          }
+
+          .map-wrapper {
+            flex: 1;
+            min-height: 400px;
+          }
+        }
       `}</style>
         </div>
     );

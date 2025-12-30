@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,19 +19,23 @@ type MotoKPI struct {
 
 // GetMotosKPIs returns time-based KPIs for motos
 func GetMotosKPIs(c *gin.Context) {
+	// Get current date in local timezone for filtering
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	
 	rows, err := db.Query(`
 		SELECT 
 			m.id,
 			m.license_plate,
-			COUNT(o.id) FILTER (WHERE o.status = 'delivered' AND DATE(o.created_at) = CURRENT_DATE) AS delivered_today,
-			AVG(EXTRACT(EPOCH FROM (o.updated_at - o.created_at))/60) FILTER (WHERE o.status = 'delivered') AS avg_delivery_time_min,
-			SUM(EXTRACT(EPOCH FROM (o.updated_at - o.created_at))/60) FILTER (WHERE o.status IN ('in_route', 'delivered')) AS total_route_time_min,
+			COUNT(o.id) FILTER (WHERE o.status = 'delivered' AND o.updated_at >= $1) AS delivered_today,
+			AVG(EXTRACT(EPOCH FROM (o.updated_at - o.created_at))/60) FILTER (WHERE o.status = 'delivered' AND o.updated_at >= $1) AS avg_delivery_time_min,
+			SUM(EXTRACT(EPOCH FROM (o.updated_at - o.created_at))/60) FILTER (WHERE o.status = 'delivered' AND o.updated_at >= $1) AS total_route_time_min,
 			MAX(o.updated_at) FILTER (WHERE o.status = 'delivered') AS last_delivery_at
 		FROM motos m
 		LEFT JOIN orders o ON m.id = o.assigned_moto_id
 		GROUP BY m.id, m.license_plate
 		ORDER BY delivered_today DESC, avg_delivery_time_min ASC NULLS LAST
-	`)
+	`, todayStart)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -53,6 +58,7 @@ func GetMotosKPIs(c *gin.Context) {
 			continue
 		}
 		if lastDelivery.Valid {
+			// Format with timezone
 			formatted := lastDelivery.Time.Format("2006-01-02 15:04:05")
 			k.LastDeliveryAt = &formatted
 		}

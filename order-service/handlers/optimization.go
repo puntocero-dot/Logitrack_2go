@@ -91,17 +91,23 @@ func OptimizeAssignments(c *gin.Context) {
 		orders = append(orders, o)
 	}
 
-	// Collect available motos with capacity
-	motoQuery := `SELECT id, license_plate, latitude, longitude, max_orders_capacity, current_orders_count 
-	              FROM motos 
-	              WHERE status = 'available' 
-	              AND current_orders_count < max_orders_capacity`
+	// Collect available motos with capacity - use branch coordinates as fallback
+	motoQuery := `SELECT m.id, m.license_plate, 
+	              COALESCE(m.latitude, b.latitude) as lat, 
+	              COALESCE(m.longitude, b.longitude) as lng, 
+	              m.max_orders_capacity, m.current_orders_count,
+	              b.name as branch_name
+	              FROM motos m
+	              LEFT JOIN branches b ON m.branch_id = b.id
+	              WHERE m.status = 'available' 
+	              AND m.current_orders_count < m.max_orders_capacity
+	              AND (m.latitude IS NOT NULL OR b.latitude IS NOT NULL)`
 	motoArgs := []interface{}{}
 	if branchID != "" {
-		motoQuery += " AND branch_id = (SELECT id FROM branches WHERE code = $1)"
+		motoQuery += " AND b.code = $1"
 		motoArgs = append(motoArgs, branchID)
 	}
-	motoQuery += " ORDER BY current_orders_count ASC"
+	motoQuery += " ORDER BY m.current_orders_count ASC"
 
 	mrows, err := db.Query(motoQuery, motoArgs...)
 	if err != nil {
@@ -114,16 +120,16 @@ func OptimizeAssignments(c *gin.Context) {
 	for mrows.Next() {
 		var m simpleMoto
 		var lat, lng sql.NullFloat64
-		if err := mrows.Scan(&m.ID, &m.LicensePlate, &lat, &lng, &m.MaxOrdersCapacity, &m.CurrentOrdersCount); err != nil {
+		var branchName sql.NullString
+		if err := mrows.Scan(&m.ID, &m.LicensePlate, &lat, &lng, &m.MaxOrdersCapacity, &m.CurrentOrdersCount, &branchName); err != nil {
 			continue
 		}
-		if lat.Valid {
+		// Only include motos with valid coordinates
+		if lat.Valid && lng.Valid {
 			m.Latitude = &lat.Float64
-		}
-		if lng.Valid {
 			m.Longitude = &lng.Float64
+			motos = append(motos, m)
 		}
-		motos = append(motos, m)
 	}
 
 	if len(orders) == 0 {

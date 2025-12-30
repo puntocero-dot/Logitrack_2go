@@ -62,6 +62,8 @@ func GetOrders(c *gin.Context) {
 	var rows *sql.Rows
 	var err error
 
+	baseQuery := "SELECT id, client_name, client_email, address, latitude, longitude, status, assigned_moto_id, branch, created_at, updated_at FROM orders"
+
 	if assignedMotoIDStr != "" {
 		motoID, convErr := strconv.Atoi(assignedMotoIDStr)
 		if convErr != nil {
@@ -69,14 +71,14 @@ func GetOrders(c *gin.Context) {
 			return
 		}
 		if branch != "" {
-			rows, err = db.Query("SELECT id, client_name, client_email, address, latitude, longitude, status, assigned_moto_id, branch FROM orders WHERE branch = $1 AND assigned_moto_id = $2", branch, motoID)
+			rows, err = db.Query(baseQuery+" WHERE branch = $1 AND assigned_moto_id = $2 ORDER BY created_at DESC", branch, motoID)
 		} else {
-			rows, err = db.Query("SELECT id, client_name, client_email, address, latitude, longitude, status, assigned_moto_id, branch FROM orders WHERE assigned_moto_id = $1", motoID)
+			rows, err = db.Query(baseQuery+" WHERE assigned_moto_id = $1 ORDER BY created_at DESC", motoID)
 		}
 	} else if branch != "" {
-		rows, err = db.Query("SELECT id, client_name, client_email, address, latitude, longitude, status, assigned_moto_id, branch FROM orders WHERE branch = $1", branch)
+		rows, err = db.Query(baseQuery+" WHERE branch = $1 ORDER BY created_at DESC", branch)
 	} else {
-		rows, err = db.Query("SELECT id, client_name, client_email, address, latitude, longitude, status, assigned_moto_id, branch FROM orders")
+		rows, err = db.Query(baseQuery + " ORDER BY created_at DESC")
 	}
 
 	if err != nil {
@@ -88,7 +90,7 @@ func GetOrders(c *gin.Context) {
 	var orders []models.Order
 	for rows.Next() {
 		var order models.Order
-		err := rows.Scan(&order.ID, &order.ClientName, &order.ClientEmail, &order.Address, &order.Latitude, &order.Longitude, &order.Status, &order.AssignedMotoID, &order.Branch)
+		err := rows.Scan(&order.ID, &order.ClientName, &order.ClientEmail, &order.Address, &order.Latitude, &order.Longitude, &order.Status, &order.AssignedMotoID, &order.Branch, &order.CreatedAt, &order.UpdatedAt)
 		if err != nil {
 			continue
 		}

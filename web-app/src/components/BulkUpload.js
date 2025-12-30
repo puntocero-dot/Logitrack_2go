@@ -174,9 +174,9 @@ const BulkUpload = ({ entityName, templateColumns, templateExample, onUpload, du
             <button
                 className="btn btn-secondary"
                 onClick={() => setIsOpen(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
             >
-                📤 Carga Masiva
+                📤 CSV
             </button>
 
             {isOpen && (

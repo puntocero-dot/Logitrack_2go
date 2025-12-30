@@ -297,50 +297,9 @@ const SupervisorDashboard = () => {
           </div>
         </div>
 
-        <div className="form-card" style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0 }}>Crear Pedido</h3>
-            <BulkUpload
-              entityName="pedidos"
-              templateColumns={['client_name', 'client_email', 'address', 'latitude', 'longitude']}
-              templateExample={['Juan Pérez', 'juan@email.com', 'Av. Principal 123', '14.6349', '-90.5069']}
-              duplicateKey="address"
-              onUpload={async (data) => {
-                let success = 0;
-                let duplicates = 0;
-                const errors = [];
-                const user = JSON.parse(localStorage.getItem('user') || '{}');
-                const branch = user.role === 'supervisor' ? user.branch : 'central';
-                const existingAddresses = orders.map(o => o.address?.toLowerCase());
-
-                for (let i = 0; i < data.length; i++) {
-                  const row = data[i];
-                  if (existingAddresses.includes(row.address?.toLowerCase())) {
-                    duplicates++;
-                    continue;
-                  }
-                  try {
-                    const res = await axios.post(`${ORDER_API_BASE_URL}/orders`, {
-                      client_name: row.client_name || 'Cliente sin nombre',
-                      client_email: row.client_email || null,
-                      address: row.address || 'Sin dirección',
-                      latitude: parseFloat(row.latitude) || 14.6349,
-                      longitude: parseFloat(row.longitude) || -90.5069,
-                      branch
-                    });
-                    success++;
-                  } catch (err) {
-                    errors.push({ row: i + 2, message: err.response?.data?.error || err.message });
-                  }
-                }
-                // Refresh orders
-                const ordersRes = await axios.get(`${ORDER_API_BASE_URL}/orders`);
-                setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
-                return { success, duplicates, errors };
-              }}
-            />
-          </div>
-          <form onSubmit={handleCreateOrder} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+        <div className="form-card" style={{ marginBottom: 20, padding: '1rem' }}>
+          <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem' }}>➕ Crear Pedido</h3>
+          <form onSubmit={handleCreateOrder} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
             <input
               type="text"
               name="client_name"
@@ -348,14 +307,16 @@ const SupervisorDashboard = () => {
               value={orderForm.client_name}
               onChange={handleOrderChange}
               className="form-input"
+              style={{ padding: '0.5rem', fontSize: '0.85rem' }}
             />
             <input
               type="email"
               name="client_email"
-              placeholder="Email del cliente (opcional)"
+              placeholder="Email (opcional)"
               value={orderForm.client_email}
               onChange={handleOrderChange}
               className="form-input"
+              style={{ padding: '0.5rem', fontSize: '0.85rem' }}
             />
             <input
               type="text"
@@ -364,29 +325,71 @@ const SupervisorDashboard = () => {
               value={orderForm.address}
               onChange={handleOrderChange}
               className="form-input"
+              style={{ padding: '0.5rem', fontSize: '0.85rem' }}
             />
             <input
               type="number"
               step="0.0001"
               name="latitude"
-              placeholder="Latitud (ej. 10.0)"
+              placeholder="Lat (ej. 13.69)"
               value={orderForm.latitude}
               onChange={handleOrderChange}
               className="form-input"
+              style={{ padding: '0.5rem', fontSize: '0.85rem' }}
             />
             <input
               type="number"
               step="0.0001"
               name="longitude"
-              placeholder="Longitud (ej. -75.0)"
+              placeholder="Lng (ej. -89.21)"
               value={orderForm.longitude}
               onChange={handleOrderChange}
               className="form-input"
+              style={{ padding: '0.5rem', fontSize: '0.85rem' }}
             />
-            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="submit" className="btn btn-primary">
-                Crear
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                ✓ Crear
               </button>
+              <BulkUpload
+                entityName="pedidos"
+                templateColumns={['client_name', 'client_email', 'address', 'latitude', 'longitude']}
+                templateExample={['Juan Pérez', 'juan@email.com', 'Av. Principal 123', '13.6929', '-89.2182']}
+                duplicateKey="address"
+                onUpload={async (data) => {
+                  let success = 0;
+                  let duplicates = 0;
+                  const errors = [];
+                  const user = JSON.parse(localStorage.getItem('user') || '{}');
+                  const branch = user.role === 'supervisor' ? user.branch : 'central';
+                  const existingAddresses = orders.map(o => o.address?.toLowerCase());
+
+                  for (let i = 0; i < data.length; i++) {
+                    const row = data[i];
+                    if (existingAddresses.includes(row.address?.toLowerCase())) {
+                      duplicates++;
+                      continue;
+                    }
+                    try {
+                      const res = await axios.post(`${ORDER_API_BASE_URL}/orders`, {
+                        client_name: row.client_name || 'Cliente sin nombre',
+                        client_email: row.client_email || null,
+                        address: row.address || 'Sin dirección',
+                        latitude: parseFloat(row.latitude) || 13.6929,
+                        longitude: parseFloat(row.longitude) || -89.2182,
+                        branch
+                      });
+                      success++;
+                    } catch (err) {
+                      errors.push({ row: i + 2, message: err.response?.data?.error || err.message });
+                    }
+                  }
+                  // Refresh orders
+                  const ordersRes = await axios.get(`${ORDER_API_BASE_URL}/orders`);
+                  setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
+                  return { success, duplicates, errors };
+                }}
+              />
             </div>
           </form>
         </div>
@@ -477,11 +480,11 @@ const SupervisorDashboard = () => {
                 <th>ID</th>
                 <th>Cliente</th>
                 <th>Dirección</th>
+                <th>Creado</th>
+                <th>Entregado</th>
                 <th>Estado</th>
                 <th>Moto</th>
                 <th>ETA</th>
-                <th>Lat</th>
-                <th>Lng</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -490,7 +493,13 @@ const SupervisorDashboard = () => {
                 <tr key={order.id}>
                   <td>{order.id}</td>
                   <td>{order.client_name}</td>
-                  <td>{order.address}</td>
+                  <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.address}</td>
+                  <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                    {order.created_at ? new Date(order.created_at).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
+                  </td>
+                  <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                    {order.status === 'delivered' && order.updated_at ? new Date(order.updated_at).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
+                  </td>
                   <td>
                     <span className={getStatusBadgeClass(order.status)}>{order.status}</span>
                   </td>
@@ -521,7 +530,7 @@ const SupervisorDashboard = () => {
                         }
                       }}
                     >
-                      <option value="">{order.assigned_moto_id ? 'Cambiar moto' : 'Asignar moto'}</option>
+                      <option value="">{order.assigned_moto_id ? 'Cambiar' : 'Asignar'}</option>
                       {availableMotos.map(moto => (
                         <option key={moto.id} value={moto.id}>
                           {moto.license_plate}
@@ -536,8 +545,6 @@ const SupervisorDashboard = () => {
                         : 'Calculando...'
                       : '-'}
                   </td>
-                  <td>{order.latitude}</td>
-                  <td>{order.longitude}</td>
                   <td>
                     <select
                       className="select-status"

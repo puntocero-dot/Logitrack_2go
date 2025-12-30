@@ -42,6 +42,7 @@ const Navbar = () => {
       links.push({ path: '/dashboard', label: 'Dashboard', icon: '📊' });
       links.push({ path: '/map', label: 'Mapa', icon: '🗺️' });
       links.push({ path: '/analytics', label: 'Analytics', icon: '📉' });
+      links.push({ path: '/reports', label: 'Reportes', icon: '📋' });
       links.push({ path: '/manager', label: 'Gerencial', icon: '📈' });
       links.push({ path: '/coordinator', label: 'Coordinador', icon: '📋' });
       links.push({ path: '/transfers', label: 'Transferencias', icon: '🔄' });
@@ -53,6 +54,7 @@ const Navbar = () => {
     else if (role === 'manager') {
       links.push({ path: '/manager', label: 'Gerencial', icon: '📈' });
       links.push({ path: '/analytics', label: 'Analytics', icon: '📉' });
+      links.push({ path: '/reports', label: 'Reportes', icon: '📋' });
       links.push({ path: '/map', label: 'Mapa', icon: '🗺️' });
       links.push({ path: '/dashboard', label: 'Operaciones', icon: '📊' });
       links.push({ path: '/transfers', label: 'Transferencias', icon: '🔄' });
@@ -67,11 +69,13 @@ const Navbar = () => {
       links.push({ path: '/dashboard', label: 'Dashboard', icon: '📊' });
       links.push({ path: '/map', label: 'Mapa', icon: '🗺️' });
       links.push({ path: '/analytics', label: 'Analytics', icon: '📉' });
+      links.push({ path: '/reports', label: 'Reportes', icon: '📋' });
       links.push({ path: '/transfers', label: 'Transferencias', icon: '🔄' });
       links.push({ path: window.location.origin + '/docs/index.html', label: 'Docs', icon: '📄', external: true });
     }
     // Analyst: reportes
     else if (role === 'analyst') {
+      links.push({ path: '/reports', label: 'Reportes', icon: '📋' });
       links.push({ path: '/analytics', label: 'Analytics', icon: '📉' });
       links.push({ path: '/manager', label: 'Métricas', icon: '📈' });
       links.push({ path: '/map', label: 'Mapa', icon: '🗺️' });

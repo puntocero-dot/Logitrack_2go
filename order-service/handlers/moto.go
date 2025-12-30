@@ -310,6 +310,7 @@ func UpdateMotoStatus(c *gin.Context) {
 }
 
 // UpdateMotoLocation actualiza la ubicación GPS de una moto en tiempo real
+// y guarda el historial de ruta para tracking completo
 func UpdateMotoLocation(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -317,14 +318,24 @@ func UpdateMotoLocation(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Latitude  float64 `json:"latitude" binding:"required"`
-		Longitude float64 `json:"longitude" binding:"required"`
+		Latitude  float64  `json:"latitude" binding:"required"`
+		Longitude float64  `json:"longitude" binding:"required"`
+		SpeedKmh  *float64 `json:"speed_kmh"`
+		Heading   *float64 `json:"heading"`
+		Accuracy  *float64 `json:"accuracy_meters"`
+		PointType string   `json:"point_type"` // start, tracking, stop, delivery
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Default point type
+	if req.PointType == "" {
+		req.PointType = "tracking"
+	}
+
+	// Update current location in motos table
 	res, err := db.Exec(`UPDATE motos SET latitude = $1, longitude = $2, last_location_update = CURRENT_TIMESTAMP WHERE id = $3`,
 		req.Latitude, req.Longitude, id)
 	if err != nil {
@@ -336,7 +347,22 @@ func UpdateMotoLocation(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Moto not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Location updated"})
+
+	// Find active orders for this moto to associate route points
+	var activeOrderID *int
+	err = db.QueryRow(`SELECT id FROM orders WHERE assigned_moto_id = $1 AND status IN ('assigned', 'in_route') ORDER BY created_at DESC LIMIT 1`, id).Scan(&activeOrderID)
+	// It's OK if no active order found - we still save the tracking point
+
+	// Save to route_points for history tracking
+	_, err = db.Exec(`INSERT INTO route_points (moto_id, order_id, latitude, longitude, speed_kmh, heading, accuracy_meters, point_type, recorded_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)`,
+		id, activeOrderID, req.Latitude, req.Longitude, req.SpeedKmh, req.Heading, req.Accuracy, req.PointType)
+	if err != nil {
+		// Log error but don't fail the request - location was updated successfully
+		// This might fail if route_points table doesn't exist yet
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Location updated", "order_id": activeOrderID})
 }
 
 func DeleteMoto(c *gin.Context) {

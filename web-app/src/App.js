@@ -14,6 +14,7 @@ import ManagerDashboard from './components/ManagerDashboard';
 import MotoTransfers from './components/MotoTransfers';
 import LiveMap from './components/LiveMap';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import ReportsDashboard from './components/ReportsDashboard';
 import BranchesManagement from './components/BranchesManagement';
 import Login from './components/Login';
 import './styles.css';
@@ -168,6 +169,16 @@ function AppRoutes() {
         element={
           <RoleRoute allowedRoles={['admin', 'manager', 'analyst', 'supervisor']}>
             <AnalyticsDashboard />
+          </RoleRoute>
+        }
+      />
+
+      {/* Reports BI Dashboard */}
+      <Route
+        path="/reports"
+        element={
+          <RoleRoute allowedRoles={['admin', 'manager', 'analyst', 'supervisor']}>
+            <ReportsDashboard />
           </RoleRoute>
         }
       />

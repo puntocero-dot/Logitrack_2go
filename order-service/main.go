@@ -102,6 +102,10 @@ func main() {
 	r.GET("/transfers/history", handlers.GetTransferHistory)
 	r.POST("/transfers/expire", handlers.ExpireTransfers) // Cron job endpoint
 
+	// GPS Route Tracking
+	r.GET("/motos/:id/route", handlers.GetMotoRoute)   // Historial de ruta de moto
+	r.GET("/orders/:id/route", handlers.GetOrderRoute) // Ruta de un pedido específico
+
 	// Prueba de Entrega (firma + foto)
 	r.POST("/orders/:id/delivery-proof", handlers.SaveDeliveryProof)
 	r.GET("/orders/:id/delivery-proof", handlers.GetDeliveryProof)

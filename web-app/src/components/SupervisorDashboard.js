@@ -22,6 +22,11 @@ const SupervisorDashboard = () => {
   });
   const [orderMessage, setOrderMessage] = useState('');
 
+  // Date filter state
+  const today = new Date().toISOString().split('T')[0];
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -95,15 +100,25 @@ const SupervisorDashboard = () => {
   };
 
   const stats = useMemo(() => {
+    // Filter orders by date range
+    const filteredByDate = orders.filter(o => {
+      if (!o.created_at) return false;
+      const orderDate = o.created_at.split('T')[0];
+      return orderDate >= dateFrom && orderDate <= dateTo;
+    });
+
     const total = orders.length;
     const pending = orders.filter(o => o.status === 'pending').length;
     const inRoute = orders.filter(o => o.status === 'in_route').length;
     const delivered = orders.filter(o => o.status === 'delivered').length;
-    const today = new Date().toISOString().split('T')[0];
-    const todayOrders = orders.filter(o => o.created_at && o.created_at.startsWith(today)).length;
+    const todayOrders = filteredByDate.length;
     const activeMotos = motos.filter(m => m.status === 'available' || m.status === 'in_route').length;
-    return { total, pending, inRoute, delivered, todayOrders, activeMotos };
-  }, [orders, motos]);
+
+    // Stats by date range
+    const deliveredInRange = filteredByDate.filter(o => o.status === 'delivered').length;
+
+    return { total, pending, inRoute, delivered, todayOrders, activeMotos, deliveredInRange };
+  }, [orders, motos, dateFrom, dateTo]);
 
   const availableMotos = useMemo(
     () => motos.filter(m => m.status === 'available'),
@@ -220,6 +235,67 @@ const SupervisorDashboard = () => {
             {orderMessage}
           </div>
         )}
+
+        {/* Date Filter Section */}
+        <div className="form-card" style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <span style={{ color: '#9ca3af', fontWeight: 500 }}>📅 Filtrar por fecha:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Desde:</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                max={dateTo}
+                className="form-input"
+                style={{ width: 'auto', padding: '0.5rem' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Hasta:</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                min={dateFrom}
+                max={today}
+                className="form-input"
+                style={{ width: 'auto', padding: '0.5rem' }}
+              />
+            </div>
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '0.5rem 1rem' }}
+              onClick={() => { setDateFrom(today); setDateTo(today); }}
+            >
+              Hoy
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '0.5rem 1rem' }}
+              onClick={() => {
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                setDateFrom(weekAgo.toISOString().split('T')[0]);
+                setDateTo(today);
+              }}
+            >
+              Última semana
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '0.5rem 1rem' }}
+              onClick={() => {
+                const monthAgo = new Date();
+                monthAgo.setDate(monthAgo.getDate() - 30);
+                setDateFrom(monthAgo.toISOString().split('T')[0]);
+                setDateTo(today);
+              }}
+            >
+              Último mes
+            </button>
+          </div>
+        </div>
 
         <div className="form-card" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>

@@ -147,7 +147,7 @@ func UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	_, err = db.Exec("UPDATE orders SET status = $1 WHERE id = $2", status, id)
+	_, err = db.Exec("UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", status, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order"})
 		return

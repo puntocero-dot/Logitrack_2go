@@ -115,7 +115,7 @@ const LiveMap = () => {
         showOrders: true,
         showBranches: true,
         showCoordinators: true,
-        statusFilter: 'all'
+        statusFilter: 'active'  // Changed from 'all' - hide delivered by default
     });
 
     const fetchData = useCallback(async () => {
@@ -157,6 +157,7 @@ const LiveMap = () => {
 
     const filteredOrders = orders.filter(o => {
         if (filters.statusFilter === 'all') return true;
+        if (filters.statusFilter === 'active') return o.status !== 'delivered' && o.status !== 'cancelled';
         return o.status === filters.statusFilter;
     });
 
@@ -246,6 +247,7 @@ const LiveMap = () => {
                         value={filters.statusFilter}
                         onChange={(e) => setFilters({ ...filters, statusFilter: e.target.value })}
                     >
+                        <option value="active">Activos</option>
                         <option value="all">Todos</option>
                         <option value="pending">Pendientes</option>
                         <option value="assigned">Asignados</option>

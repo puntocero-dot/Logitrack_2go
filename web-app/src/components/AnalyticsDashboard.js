@@ -58,8 +58,40 @@ const AnalyticsDashboard = () => {
         setLoading(false);
     };
 
-    // Calcular estadísticas
-    const statusCounts = orders.reduce((acc, o) => {
+    // Helper to filter orders by date range
+    const getFilteredOrders = () => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (dateRange === 'today') {
+            return orders.filter(o => {
+                if (!o.created_at) return false;
+                const orderDate = new Date(o.created_at);
+                return orderDate >= today;
+            });
+        } else if (dateRange === 'week') {
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return orders.filter(o => {
+                if (!o.created_at) return false;
+                const orderDate = new Date(o.created_at);
+                return orderDate >= weekAgo;
+            });
+        } else {
+            const monthAgo = new Date(today);
+            monthAgo.setDate(monthAgo.getDate() - 30);
+            return orders.filter(o => {
+                if (!o.created_at) return false;
+                const orderDate = new Date(o.created_at);
+                return orderDate >= monthAgo;
+            });
+        }
+    };
+
+    const filteredOrders = getFilteredOrders();
+
+    // Calcular estadísticas basadas en pedidos filtrados
+    const statusCounts = filteredOrders.reduce((acc, o) => {
         acc[o.status] = (acc[o.status] || 0) + 1;
         return acc;
     }, {});
@@ -69,24 +101,54 @@ const AnalyticsDashboard = () => {
         return acc;
     }, {});
 
-    // Simular datos históricos (en producción vendrían de la API)
+    // Usar datos reales de pedidos para el gráfico
     const generateHistoricalData = () => {
         const days = dateRange === 'today' ? 24 : dateRange === 'week' ? 7 : 30;
         const labels = [];
         const deliveredData = [];
         const pendingData = [];
+        const now = new Date();
 
         for (let i = days - 1; i >= 0; i--) {
             if (dateRange === 'today') {
-                labels.push(`${23 - i}:00`);
+                const hour = 23 - i;
+                labels.push(`${hour}:00`);
+
+                // Contar pedidos entregados/pendientes en esa hora
+                const hourDelivered = orders.filter(o => {
+                    if (!o.updated_at || o.status !== 'delivered') return false;
+                    const d = new Date(o.updated_at);
+                    return d.getDate() === now.getDate() && d.getHours() === hour;
+                }).length;
+
+                const hourPending = orders.filter(o => {
+                    if (!o.created_at || o.status !== 'pending') return false;
+                    const d = new Date(o.created_at);
+                    return d.getDate() === now.getDate() && d.getHours() === hour;
+                }).length;
+
+                deliveredData.push(hourDelivered);
+                pendingData.push(hourPending);
             } else {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
                 labels.push(date.toLocaleDateString('es-GT', { weekday: 'short', day: 'numeric' }));
+
+                // Contar pedidos entregados/pendientes en ese día
+                const dayDelivered = orders.filter(o => {
+                    if (!o.updated_at || o.status !== 'delivered') return false;
+                    return o.updated_at.startsWith(dateStr);
+                }).length;
+
+                const dayPending = orders.filter(o => {
+                    if (!o.created_at) return false;
+                    return o.created_at.startsWith(dateStr) && o.status === 'pending';
+                }).length;
+
+                deliveredData.push(dayDelivered);
+                pendingData.push(dayPending);
             }
-            // Datos simulados (en producción serían reales)
-            deliveredData.push(Math.floor(Math.random() * 20) + 5);
-            pendingData.push(Math.floor(Math.random() * 10) + 2);
         }
 
         return { labels, deliveredData, pendingData };

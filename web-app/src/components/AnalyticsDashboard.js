@@ -35,11 +35,15 @@ const AnalyticsDashboard = () => {
     const [orders, setOrders] = useState([]);
     const [motos, setMotos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [dateRange, setDateRange] = useState('week'); // today, week, month
+
+    // Date range filter with calendar
+    const today = new Date().toISOString().split('T')[0];
+    const [dateFrom, setDateFrom] = useState(today);
+    const [dateTo, setDateTo] = useState(today);
 
     useEffect(() => {
         fetchData();
-    }, [dateRange]);
+    }, [dateFrom, dateTo]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -60,32 +64,11 @@ const AnalyticsDashboard = () => {
 
     // Helper to filter orders by date range
     const getFilteredOrders = () => {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        if (dateRange === 'today') {
-            return orders.filter(o => {
-                if (!o.created_at) return false;
-                const orderDate = new Date(o.created_at);
-                return orderDate >= today;
-            });
-        } else if (dateRange === 'week') {
-            const weekAgo = new Date(today);
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            return orders.filter(o => {
-                if (!o.created_at) return false;
-                const orderDate = new Date(o.created_at);
-                return orderDate >= weekAgo;
-            });
-        } else {
-            const monthAgo = new Date(today);
-            monthAgo.setDate(monthAgo.getDate() - 30);
-            return orders.filter(o => {
-                if (!o.created_at) return false;
-                const orderDate = new Date(o.created_at);
-                return orderDate >= monthAgo;
-            });
-        }
+        return orders.filter(o => {
+            if (!o.created_at) return false;
+            const orderDate = o.created_at.split('T')[0];
+            return orderDate >= dateFrom && orderDate <= dateTo;
+        });
     };
 
     const filteredOrders = getFilteredOrders();
@@ -101,41 +84,48 @@ const AnalyticsDashboard = () => {
         return acc;
     }, {});
 
-    // Usar datos reales de pedidos para el gráfico
+    // Usar datos reales de pedidos para el gráfico basado en rango de fechas
     const generateHistoricalData = () => {
-        const days = dateRange === 'today' ? 24 : dateRange === 'week' ? 7 : 30;
         const labels = [];
         const deliveredData = [];
         const pendingData = [];
-        const now = new Date();
 
-        for (let i = days - 1; i >= 0; i--) {
-            if (dateRange === 'today') {
-                const hour = 23 - i;
+        // Calculate days between dateFrom and dateTo
+        const from = new Date(dateFrom);
+        const to = new Date(dateTo);
+        const diffTime = Math.abs(to - from);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        // If same day, show hours
+        if (dateFrom === dateTo) {
+            for (let hour = 0; hour < 24; hour++) {
                 labels.push(`${hour}:00`);
 
-                // Contar pedidos entregados/pendientes en esa hora
                 const hourDelivered = orders.filter(o => {
                     if (!o.updated_at || o.status !== 'delivered') return false;
                     const d = new Date(o.updated_at);
-                    return d.getDate() === now.getDate() && d.getHours() === hour;
+                    const orderDate = o.updated_at.split('T')[0];
+                    return orderDate === dateFrom && d.getHours() === hour;
                 }).length;
 
                 const hourPending = orders.filter(o => {
-                    if (!o.created_at || o.status !== 'pending') return false;
+                    if (!o.created_at) return false;
                     const d = new Date(o.created_at);
-                    return d.getDate() === now.getDate() && d.getHours() === hour;
+                    const orderDate = o.created_at.split('T')[0];
+                    return orderDate === dateFrom && d.getHours() === hour && o.status === 'pending';
                 }).length;
 
                 deliveredData.push(hourDelivered);
                 pendingData.push(hourPending);
-            } else {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
+            }
+        } else {
+            // Multiple days - show daily data
+            for (let i = 0; i < diffDays; i++) {
+                const date = new Date(from);
+                date.setDate(date.getDate() + i);
                 const dateStr = date.toISOString().split('T')[0];
                 labels.push(date.toLocaleDateString('es-GT', { weekday: 'short', day: 'numeric' }));
 
-                // Contar pedidos entregados/pendientes en ese día
                 const dayDelivered = orders.filter(o => {
                     if (!o.updated_at || o.status !== 'delivered') return false;
                     return o.updated_at.startsWith(dateStr);
@@ -297,16 +287,73 @@ const AnalyticsDashboard = () => {
         <div className="analytics-dashboard">
             <div className="analytics-header">
                 <h2>📊 Analytics Dashboard</h2>
-                <div className="date-filter">
-                    {['today', 'week', 'month'].map((range) => (
-                        <button
-                            key={range}
-                            className={`filter-btn ${dateRange === range ? 'active' : ''}`}
-                            onClick={() => setDateRange(range)}
-                        >
-                            {range === 'today' ? 'Hoy' : range === 'week' ? '7 días' : '30 días'}
-                        </button>
-                    ))}
+                <div className="date-filter-calendar">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Desde:</label>
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            max={dateTo}
+                            style={{
+                                background: '#374151',
+                                border: '1px solid #4b5563',
+                                borderRadius: '8px',
+                                color: 'white',
+                                padding: '0.5rem',
+                                fontSize: '0.9rem'
+                            }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Hasta:</label>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            min={dateFrom}
+                            max={today}
+                            style={{
+                                background: '#374151',
+                                border: '1px solid #4b5563',
+                                borderRadius: '8px',
+                                color: 'white',
+                                padding: '0.5rem',
+                                fontSize: '0.9rem'
+                            }}
+                        />
+                    </div>
+                    <button
+                        className="filter-btn"
+                        onClick={() => { setDateFrom(today); setDateTo(today); }}
+                        style={{ padding: '0.5rem 1rem' }}
+                    >
+                        Hoy
+                    </button>
+                    <button
+                        className="filter-btn"
+                        onClick={() => {
+                            const weekAgo = new Date();
+                            weekAgo.setDate(weekAgo.getDate() - 7);
+                            setDateFrom(weekAgo.toISOString().split('T')[0]);
+                            setDateTo(today);
+                        }}
+                        style={{ padding: '0.5rem 1rem' }}
+                    >
+                        7 días
+                    </button>
+                    <button
+                        className="filter-btn"
+                        onClick={() => {
+                            const monthAgo = new Date();
+                            monthAgo.setDate(monthAgo.getDate() - 30);
+                            setDateFrom(monthAgo.toISOString().split('T')[0]);
+                            setDateTo(today);
+                        }}
+                        style={{ padding: '0.5rem 1rem' }}
+                    >
+                        30 días
+                    </button>
                 </div>
             </div>
 
@@ -396,27 +443,29 @@ const AnalyticsDashboard = () => {
           margin: 0;
         }
 
-        .date-filter {
+        .date-filter-calendar {
           display: flex;
-          gap: 0.5rem;
+          gap: 1rem;
+          align-items: center;
+          flex-wrap: wrap;
           background: #1f2937;
           border-radius: 12px;
-          padding: 0.25rem;
+          padding: 0.75rem 1rem;
         }
 
         .filter-btn {
           padding: 0.5rem 1rem;
           border: none;
           border-radius: 8px;
-          background: transparent;
+          background: #374151;
           color: #9ca3af;
           cursor: pointer;
           transition: all 0.2s;
           font-size: 0.9rem;
         }
 
-        .filter-btn.active {
-          background: #3b82f6;
+        .filter-btn:hover {
+          background: #4b5563;
           color: white;
         }
 

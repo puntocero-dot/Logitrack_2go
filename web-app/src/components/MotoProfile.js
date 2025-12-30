@@ -1,7 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { ORDER_API_BASE_URL, USER_API_BASE_URL } from '../config/api';
+
+// Fix for default marker icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom numbered marker
+const numberedIcon = (num, color) => L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="
+    width: 28px;
+    height: 28px;
+    background: ${color};
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  ">${num}</div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+  popupAnchor: [0, -14]
+});
 
 const MotoProfile = () => {
   const { id } = useParams();
@@ -215,6 +248,85 @@ const MotoProfile = () => {
 
         <div className="profile-section">
           <h4>Historial de Pedidos ({orders.length})</h4>
+
+          {/* Route Map */}
+          {orders.filter(o => o.latitude && o.longitude).length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <h5 style={{ color: '#9ca3af', marginBottom: '0.5rem' }}>🗺️ Mapa de Rutas</h5>
+              <div style={{ height: '350px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #444' }}>
+                <MapContainer
+                  center={[
+                    orders.find(o => o.latitude)?.latitude || 13.69,
+                    orders.find(o => o.longitude)?.longitude || -89.21
+                  ]}
+                  zoom={13}
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <TileLayer
+                    attribution='&copy; OpenStreetMap'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+
+                  {/* Route polyline connecting all delivered orders */}
+                  {(() => {
+                    const deliveredOrders = orders
+                      .filter(o => o.status === 'delivered' && o.latitude && o.longitude)
+                      .sort((a, b) => new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at));
+
+                    if (deliveredOrders.length > 1) {
+                      const positions = deliveredOrders.map(o => [o.latitude, o.longitude]);
+                      return <Polyline positions={positions} color="#3b82f6" weight={4} opacity={0.8} />;
+                    }
+                    return null;
+                  })()}
+
+                  {/* Markers for each order */}
+                  {orders
+                    .filter(o => o.latitude && o.longitude)
+                    .sort((a, b) => new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at))
+                    .map((order, idx) => (
+                      <Marker
+                        key={order.id}
+                        position={[order.latitude, order.longitude]}
+                        icon={numberedIcon(
+                          idx + 1,
+                          order.status === 'delivered' ? '#10b981' :
+                            order.status === 'in_route' ? '#f59e0b' : '#ef4444'
+                        )}
+                      >
+                        <Popup>
+                          <div style={{ minWidth: '180px' }}>
+                            <strong>#{order.id} - {order.client_name}</strong>
+                            <p style={{ margin: '4px 0', fontSize: '0.85rem' }}>{order.address}</p>
+                            <span style={{
+                              background: order.status === 'delivered' ? '#10b981' : '#f59e0b',
+                              color: 'white',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem'
+                            }}>
+                              {order.status}
+                            </span>
+                            {order.updated_at && (
+                              <p style={{ margin: '4px 0', fontSize: '0.75rem', color: '#666' }}>
+                                {new Date(order.updated_at).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+                </MapContainer>
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.8rem', color: '#9ca3af' }}>
+                <span>🟢 Entregado</span>
+                <span>🟡 En ruta</span>
+                <span>🔴 Pendiente</span>
+                <span>— Línea azul: recorrido</span>
+              </div>
+            </div>
+          )}
+
           <div className="table-wrapper">
             <table className="data-table">
               <thead>

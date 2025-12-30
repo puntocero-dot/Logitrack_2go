@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"math"
 	"net/http"
 	"strconv"
@@ -55,8 +56,21 @@ func GetOrderETA(c *gin.Context) {
 		WHERE moto_id = $1 AND type = 'current' ORDER BY timestamp DESC LIMIT 1`, motoID).
 		Scan(&motoLat, &motoLng)
 	if err != nil {
-		// Fallback to depot if no location yet
-		motoLat, motoLng = 10.0, -75.0
+		// Fallback to moto's branch coordinates
+		var branchLat, branchLng sql.NullFloat64
+		err = db.QueryRow(`
+			SELECT COALESCE(m.latitude, b.latitude), COALESCE(m.longitude, b.longitude)
+			FROM motos m
+			LEFT JOIN branches b ON m.branch_id = b.id
+			WHERE m.id = $1`, motoID).Scan(&branchLat, &branchLng)
+
+		if err == nil && branchLat.Valid && branchLng.Valid {
+			motoLat = branchLat.Float64
+			motoLng = branchLng.Float64
+		} else {
+			// Last resort: use El Salvador default coordinates
+			motoLat, motoLng = 13.6929, -89.2182 // San Salvador
+		}
 	}
 
 	// Compute distance and ETA

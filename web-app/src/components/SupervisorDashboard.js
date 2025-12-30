@@ -99,26 +99,28 @@ const SupervisorDashboard = () => {
     }
   };
 
-  const stats = useMemo(() => {
-    // Filter orders by date range
-    const filteredByDate = orders.filter(o => {
-      if (!o.created_at) return false;
+  // Filter orders by date range
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      if (!o.created_at) return true; // Show orders without date
       const orderDate = o.created_at.split('T')[0];
       return orderDate >= dateFrom && orderDate <= dateTo;
     });
+  }, [orders, dateFrom, dateTo]);
 
+  const stats = useMemo(() => {
     const total = orders.length;
     const pending = orders.filter(o => o.status === 'pending').length;
     const inRoute = orders.filter(o => o.status === 'in_route').length;
     const delivered = orders.filter(o => o.status === 'delivered').length;
-    const todayOrders = filteredByDate.length;
+    const todayOrders = filteredOrders.length;
     const activeMotos = motos.filter(m => m.status === 'available' || m.status === 'in_route').length;
 
     // Stats by date range
-    const deliveredInRange = filteredByDate.filter(o => o.status === 'delivered').length;
+    const deliveredInRange = filteredOrders.filter(o => o.status === 'delivered').length;
 
     return { total, pending, inRoute, delivered, todayOrders, activeMotos, deliveredInRange };
-  }, [orders, motos, dateFrom, dateTo]);
+  }, [orders, motos, filteredOrders]);
 
   const availableMotos = useMemo(
     () => motos.filter(m => m.status === 'available'),
@@ -489,7 +491,7 @@ const SupervisorDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {(orders || []).map(order => (
+              {(filteredOrders || []).map(order => (
                 <tr key={order.id}>
                   <td>{order.id}</td>
                   <td>{order.client_name}</td>

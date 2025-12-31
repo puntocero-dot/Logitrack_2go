@@ -102,7 +102,7 @@ const SupervisorDashboard = () => {
   // Filter orders by date range
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
-      if (!o.created_at) return true; // Show orders without date
+      if (!o.created_at) return false; // Exclude orders without date
       const orderDate = o.created_at.split('T')[0];
       return orderDate >= dateFrom && orderDate <= dateTo;
     });

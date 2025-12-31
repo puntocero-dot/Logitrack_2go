@@ -23,8 +23,8 @@ func GetMotosKPIs(c *gin.Context) {
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-	// Query: Only count today's deliveries, and calculate time only for orders
-	// that were both assigned AND delivered today (to avoid multi-day calculations)
+	// Query: Only count today's deliveries - use updated_at for delivered orders
+	// Removed created_at filter to include orders created on previous days but delivered today
 	rows, err := db.Query(`
 		SELECT 
 			m.id,
@@ -35,13 +35,13 @@ func GetMotosKPIs(c *gin.Context) {
 					EXTRACT(EPOCH FROM (o.updated_at - o.created_at))/60,
 					120  -- Cap at 2 hours max to filter outliers
 				)
-			) FILTER (WHERE o.status = 'delivered' AND o.updated_at >= $1 AND o.created_at >= $1) AS avg_delivery_time_min,
+			) FILTER (WHERE o.status = 'delivered' AND o.updated_at >= $1) AS avg_delivery_time_min,
 			SUM(
 				LEAST(
 					EXTRACT(EPOCH FROM (o.updated_at - o.created_at))/60,
 					120
 				)
-			) FILTER (WHERE o.status = 'delivered' AND o.updated_at >= $1 AND o.created_at >= $1) AS total_route_time_min,
+			) FILTER (WHERE o.status = 'delivered' AND o.updated_at >= $1) AS total_route_time_min,
 			MAX(o.updated_at) FILTER (WHERE o.status = 'delivered' AND o.updated_at >= $1) AS last_delivery_at
 		FROM motos m
 		LEFT JOIN orders o ON m.id = o.assigned_moto_id

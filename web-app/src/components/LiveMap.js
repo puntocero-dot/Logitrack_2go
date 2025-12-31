@@ -208,37 +208,37 @@ const LiveMap = () => {
             <div className="map-controls">
                 <h3>🗺️ Mapa en Vivo</h3>
                 <div className="filter-group">
-                    <label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
                         <input
                             type="checkbox"
                             checked={filters.showMotos}
                             onChange={(e) => setFilters({ ...filters, showMotos: e.target.checked })}
                         />
-                        🏍️ Motos ({activeMotos.length})
+                        <span>🏍️</span> Motos ({activeMotos.length})
                     </label>
-                    <label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
                         <input
                             type="checkbox"
                             checked={filters.showCoordinators}
                             onChange={(e) => setFilters({ ...filters, showCoordinators: e.target.checked })}
                         />
-                        👷 Coordinadores ({activeCoordinators.length})
+                        <span>👷</span> Coordinadores ({activeCoordinators.length})
                     </label>
-                    <label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
                         <input
                             type="checkbox"
                             checked={filters.showOrders}
                             onChange={(e) => setFilters({ ...filters, showOrders: e.target.checked })}
                         />
-                        📦 Pedidos ({filteredOrders.length})
+                        <span>📦</span> Pedidos ({filteredOrders.length})
                     </label>
-                    <label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
                         <input
                             type="checkbox"
                             checked={filters.showBranches}
                             onChange={(e) => setFilters({ ...filters, showBranches: e.target.checked })}
                         />
-                        🏢 Sucursales ({branches.length})
+                        <span>🏢</span> Sucursales ({branches.length})
                     </label>
                 </div>
                 <div className="filter-group">

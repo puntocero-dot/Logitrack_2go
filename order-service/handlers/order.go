@@ -31,8 +31,8 @@ func CreateOrder(c *gin.Context) {
 
 	var orderID int
 	err := db.QueryRow(`
-		INSERT INTO orders (client_name, client_email, address, latitude, longitude, status, branch) 
-		VALUES ($1, $2, $3, $4, $5, 'pending', $6) 
+		INSERT INTO orders (client_name, client_email, address, latitude, longitude, status, branch, created_at, updated_at) 
+		VALUES ($1, $2, $3, $4, $5, 'pending', $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
 		RETURNING id
 	`, req.ClientName, req.ClientEmail, req.Address, req.Latitude, req.Longitude, req.Branch).Scan(&orderID)
 

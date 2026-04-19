@@ -21,8 +21,7 @@ const Login = () => {
   };
 
   return (
-    <div className="app-shell">
-      <div className="auth-card">
+    <div className="auth-card">
         <h2 className="auth-title">Logitrack</h2>
         <p className="auth-subtitle">Inicia sesión para gestionar tus pedidos en tiempo real.</p>
         <form onSubmit={handleSubmit}>
@@ -50,7 +49,6 @@ const Login = () => {
           {error && <p className="auth-error">{error}</p>}
         </form>
       </div>
-    </div>
   );
 };
 

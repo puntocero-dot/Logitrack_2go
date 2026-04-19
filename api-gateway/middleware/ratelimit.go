@@ -14,16 +14,17 @@ import (
 )
 
 var (
-	rateLimiter *limiter.Limiter
-	redisClient *redis.Client
+	loginLimiter   *limiter.Limiter
+	refreshLimiter *limiter.Limiter
+	defaultLimiter *limiter.Limiter
+	redisClient    *redis.Client
 )
 
-// InitRateLimiter inicializa el rate limiter con Redis
+// InitRateLimiter inicializa los rate limiters con Redis
 func InitRateLimiter() error {
-	// Conectar a Redis
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
-		redisURL = "redis://:logitrack_redis_password@localhost:6379/0"
+		return fmt.Errorf("REDIS_URL must be set")
 	}
 
 	opt, err := redis.ParseURL(redisURL)
@@ -41,48 +42,51 @@ func InitRateLimiter() error {
 		return fmt.Errorf("error connecting to Redis: %w", err)
 	}
 
-	// Configurar rate limiter: 100 requests por minuto por IP
-	rate := limiter.Rate{
-		Period: 1 * time.Minute,
-		Limit:  100,
-	}
-
-	store, err := sredis.NewStoreWithOptions(redisClient, limiter.StoreOptions{
-		Prefix:   "ratelimit",
+	loginStore, err := sredis.NewStoreWithOptions(redisClient, limiter.StoreOptions{
+		Prefix:   "rl:login",
 		MaxRetry: 3,
 	})
 	if err != nil {
-		return fmt.Errorf("error creating rate limiter store: %w", err)
+		return fmt.Errorf("error creating login rate limiter store: %w", err)
 	}
+	loginLimiter = limiter.New(loginStore, limiter.Rate{Period: 1 * time.Minute, Limit: 5})
 
-	rateLimiter = limiter.New(store, rate)
+	refreshStore, err := sredis.NewStoreWithOptions(redisClient, limiter.StoreOptions{
+		Prefix:   "rl:refresh",
+		MaxRetry: 3,
+	})
+	if err != nil {
+		return fmt.Errorf("error creating refresh rate limiter store: %w", err)
+	}
+	refreshLimiter = limiter.New(refreshStore, limiter.Rate{Period: 1 * time.Minute, Limit: 10})
+
+	defaultStore, err := sredis.NewStoreWithOptions(redisClient, limiter.StoreOptions{
+		Prefix:   "rl:general",
+		MaxRetry: 3,
+	})
+	if err != nil {
+		return fmt.Errorf("error creating default rate limiter store: %w", err)
+	}
+	defaultLimiter = limiter.New(defaultStore, limiter.Rate{Period: 1 * time.Minute, Limit: 100})
 
 	return nil
 }
 
-// RateLimitMiddleware aplica rate limiting por IP
-func RateLimitMiddleware() gin.HandlerFunc {
+func rateLimitWith(l *limiter.Limiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Obtener IP del cliente
 		ip := c.ClientIP()
-
-		// Verificar rate limit
 		ctx := c.Request.Context()
-		limiterCtx, err := rateLimiter.Get(ctx, ip)
+		limiterCtx, err := l.Get(ctx, ip)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Rate limiter error",
-			})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Rate limiter error"})
 			c.Abort()
 			return
 		}
 
-		// Agregar headers de rate limit
 		c.Header("X-RateLimit-Limit", fmt.Sprintf("%d", limiterCtx.Limit))
 		c.Header("X-RateLimit-Remaining", fmt.Sprintf("%d", limiterCtx.Remaining))
 		c.Header("X-RateLimit-Reset", fmt.Sprintf("%d", limiterCtx.Reset))
 
-		// Si se excedió el límite
 		if limiterCtx.Reached {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       "Rate limit exceeded",
@@ -95,6 +99,26 @@ func RateLimitMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// RateLimitLogin aplica rate limiting para /auth/login (5 req/min)
+func RateLimitLogin() gin.HandlerFunc {
+	return rateLimitWith(loginLimiter)
+}
+
+// RateLimitRefresh aplica rate limiting para /auth/refresh (10 req/min)
+func RateLimitRefresh() gin.HandlerFunc {
+	return rateLimitWith(refreshLimiter)
+}
+
+// RateLimitGeneral aplica rate limiting general (100 req/min), prefijo rl:general
+func RateLimitGeneral() gin.HandlerFunc {
+	return rateLimitWith(defaultLimiter)
+}
+
+// RateLimitMiddleware es un alias de RateLimitGeneral para compatibilidad con código existente
+func RateLimitMiddleware() gin.HandlerFunc {
+	return RateLimitGeneral()
 }
 
 // GetRedisClient retorna el cliente Redis para uso en otros módulos

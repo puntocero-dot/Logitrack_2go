@@ -1,13 +1,22 @@
 package auth
 
 import (
+	"log"
 	"os"
 	"time"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+var jwtSecret = mustLoadJWTSecret()
+
+func mustLoadJWTSecret() []byte {
+	s := os.Getenv("JWT_SECRET")
+	if len(s) < 32 {
+		log.Fatal("JWT_SECRET must be set and at least 32 characters")
+	}
+	return []byte(s)
+}
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)

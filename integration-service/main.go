@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -84,9 +85,21 @@ func main() {
 	r.Run(":8084")
 }
 
+// buildDSN retorna el DATABASE_URL asegurando sslmode=require en producción.
+// Duplicado de la misma lógica en order-service y geolocation-service para evitar
+// reestructuración de paquetes compartidos.
+func buildDSN() string {
+	dsn := os.Getenv("DATABASE_URL")
+	if os.Getenv("ENV") == "production" && strings.Contains(dsn, "sslmode=disable") {
+		log.Println("⚠️  WARNING: sslmode=disable detectado en producción — forzando sslmode=require")
+		dsn = strings.ReplaceAll(dsn, "sslmode=disable", "sslmode=require")
+	}
+	return dsn
+}
+
 func initDB() {
 	var err error
-	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	db, err = sql.Open("postgres", buildDSN())
 	if err != nil {
 		log.Fatal("Error conectando a BD:", err)
 	}

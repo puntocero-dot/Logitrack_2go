@@ -57,6 +57,7 @@ type optimizeResponse struct {
 	Stats            OptimizationStats `json:"stats,omitempty"`
 	UnassignedOrders []int             `json:"unassigned_orders,omitempty"`
 	Message          string            `json:"message,omitempty"`
+	Algorithm        string            `json:"algorithm,omitempty"` // "ortools_cvrp" | "greedy_fallback"
 }
 
 // OptimizeAssignments collects pending orders and available motos and calls ai-service.
@@ -211,21 +212,36 @@ func ApplyOptimizedAssignments(c *gin.Context) {
 	appliedCount := 0
 
 	for _, a := range req.Assignments {
-		// Assign order to moto and update status
+		// Asignar pedido a la moto y actualizar estado
 		_, err := db.Exec(`UPDATE orders SET assigned_moto_id = $1, status = 'assigned', updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
 			a.MotoID, a.OrderID)
 		if err != nil {
-			continue // Log but don't fail entire operation
+			continue // Loggear pero no cancelar toda la operación
 		}
 
-		// Increment moto's current order count
+		// Incrementar contador de pedidos en la moto
 		_, err = db.Exec(`UPDATE motos SET current_orders_count = current_orders_count + 1 WHERE id = $1`, a.MotoID)
 		if err != nil {
-			// Log error but continue
+			// Error no crítico, continuar
 		}
 
 		byMoto[a.MotoID] = append(byMoto[a.MotoID], a.OrderID)
 		appliedCount++
+
+		// Guardar ETA estimado en la orden para calcular on_time_rate después
+		// Obtener coordenadas de la moto y del pedido para ETA real
+		var motoLat, motoLng sql.NullFloat64
+		db.QueryRow(`SELECT COALESCE(m.latitude, b.latitude), COALESCE(m.longitude, b.longitude)
+			FROM motos m LEFT JOIN branches b ON m.branch_id = b.id WHERE m.id = $1`,
+			a.MotoID).Scan(&motoLat, &motoLng)
+		var orderLat, orderLng float64
+		db.QueryRow("SELECT latitude, longitude FROM orders WHERE id = $1", a.OrderID).Scan(&orderLat, &orderLng)
+		if motoLat.Valid && motoLng.Valid {
+			go StoreETAOnAssignment(a.OrderID, motoLat.Float64, motoLng.Float64, orderLat, orderLng)
+		}
+
+		// Registrar checkpoint de KPI
+		db.Exec("INSERT INTO kpis (order_id, checkpoint) VALUES ($1, 'assigned')", a.OrderID)
 	}
 
 	// Create routes for each moto with assignments

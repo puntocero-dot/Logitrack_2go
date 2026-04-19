@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -16,9 +17,17 @@ import (
 
 var db *sql.DB
 
+func buildDSN() string {
+	dsn := os.Getenv("DATABASE_URL")
+	if os.Getenv("ENV") == "production" && strings.Contains(dsn, "sslmode=disable") {
+		dsn = strings.ReplaceAll(dsn, "sslmode=disable", "sslmode=require")
+	}
+	return dsn
+}
+
 func initDB() {
 	var err error
-	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	db, err = sql.Open("postgres", buildDSN())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,14 +58,17 @@ func main() {
 	r.GET("/locations", handlers.GetLocations)
 	r.GET("/locations/motos/latest", handlers.GetLatestLocationsByMoto)
 
-	// Rutas de turnos (nuevas)
+	// Rutas de turnos
 	shifts := r.Group("/shifts")
 	{
-		shifts.POST("/start", handlers.StartShift)        // Iniciar turno
-		shifts.POST("/:id/point", handlers.AddRoutePoint) // Agregar punto GPS
-		shifts.POST("/:id/end", handlers.EndShift)        // Finalizar turno
-		shifts.GET("/:id/route", handlers.GetShiftRoute)  // Obtener ruta completa
-		shifts.GET("/active", handlers.GetActiveShifts)   // Turnos activos (supervisores)
+		shifts.POST("/start", handlers.StartShift)              // Iniciar turno
+		shifts.POST("/:id/point", handlers.AddRoutePoint)       // Agregar punto GPS
+		shifts.POST("/:id/end", handlers.EndShift)              // Finalizar turno
+		shifts.GET("/:id/route", handlers.GetShiftRoute)        // Ruta completa (todos los puntos)
+		shifts.GET("/:id/segments", handlers.GetShiftSegments)  // Ruta segmentada por entrega con tiempos
+		shifts.GET("/:id/stops", handlers.GetShiftStops)        // Paradas detectadas (semáforos, esperas)
+		shifts.GET("/:id/live", handlers.WSLive)                // WebSocket live tracking
+		shifts.GET("/active", handlers.GetActiveShifts)         // Turnos activos (supervisores)
 	}
 
 	// Rutas de drivers

@@ -69,12 +69,20 @@ CREATE TABLE IF NOT EXISTS orders (
     status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'in_route', 'delivered', 'cancelled')),
     assigned_moto_id INTEGER REFERENCES motos(id),
     branch VARCHAR(50) DEFAULT 'central',
+    -- Campos de ETA estimado (Fase 3 — para calcular on_time_rate)
+    estimated_eta_min      DECIMAL(8,2),
+    estimated_distance_km  DECIMAL(10,3),
+    eta_method             VARCHAR(30),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_branch ON orders(branch);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+-- Índice para KPI on_time_rate (pedidos entregados con ETA guardado)
+CREATE INDEX IF NOT EXISTS idx_orders_delivered_eta
+    ON orders(status, updated_at, estimated_eta_min)
+    WHERE status = 'delivered' AND estimated_eta_min IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS locations (
     id SERIAL PRIMARY KEY,
@@ -149,6 +157,13 @@ CREATE INDEX IF NOT EXISTS idx_route_points_shift_id ON route_points(shift_id);
 CREATE INDEX IF NOT EXISTS idx_route_points_timestamp ON route_points(timestamp);
 CREATE INDEX IF NOT EXISTS idx_route_points_type ON route_points(point_type);
 CREATE INDEX IF NOT EXISTS idx_route_points_order_id ON route_points(order_id);
+
+-- Índices compuestos para tracking eficiente (Fase 2)
+CREATE INDEX IF NOT EXISTS idx_route_points_shift_timestamp ON route_points(shift_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_route_points_shift_type ON route_points(shift_id, point_type);
+CREATE INDEX IF NOT EXISTS idx_route_points_order_partial ON route_points(order_id) WHERE order_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_shifts_driver_status ON shifts(driver_id, status);
+CREATE INDEX IF NOT EXISTS idx_shifts_active_branch ON shifts(status, branch) WHERE status = 'ACTIVE';
 
 -- Trigger para updated_at automático
 CREATE OR REPLACE FUNCTION update_shifts_updated_at()

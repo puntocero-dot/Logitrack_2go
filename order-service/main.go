@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -15,9 +16,17 @@ import (
 
 var db *sql.DB
 
+func buildDSN() string {
+	dsn := os.Getenv("DATABASE_URL")
+	if os.Getenv("ENV") == "production" && strings.Contains(dsn, "sslmode=disable") {
+		dsn = strings.ReplaceAll(dsn, "sslmode=disable", "sslmode=require")
+	}
+	return dsn
+}
+
 func initDB() {
 	var err error
-	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	db, err = sql.Open("postgres", buildDSN())
 	if err != nil {
 		log.Fatal(err)
 	}

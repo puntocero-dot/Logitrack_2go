@@ -2,7 +2,9 @@ package main
 
 // Version: 3.0.0 - Superadmin + Users Management + Branches
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"log"
 	"os"
 
@@ -19,9 +21,34 @@ import (
 
 var db *sql.DB
 
+func mustGetSeedPassword(key string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		if os.Getenv("ENV") == "production" {
+			log.Fatalf("%s must be set in production", key)
+		}
+		// Dev: generar password aleatorio de 24 bytes hex y advertir en logs
+		b := make([]byte, 18)
+		if _, err := rand.Read(b); err != nil {
+			log.Fatalf("failed to generate random password for %s: %v", key, err)
+		}
+		v = base64.StdEncoding.EncodeToString(b)[:24]
+		log.Printf("⚠️  WARNING: %s not set. Generated random dev password: %s — set this in .env!", key, v)
+		return v
+	}
+	// Validar fortaleza mínima cuando el valor SÍ está seteado
+	if len(v) < 12 {
+		if os.Getenv("ENV") == "production" {
+			log.Fatalf("%s must be at least 12 characters in production", key)
+		}
+		log.Printf("⚠️  WARNING: %s is less than 12 characters. Use a stronger password!", key)
+	}
+	return v
+}
+
 func initDB() {
 	var err error
-	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	db, err = sql.Open("postgres", database.BuildDSN())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,15 +71,11 @@ func initRedis() {
 
 func seedUsers() {
 	// Hash passwords before inserting
-	defaultPass := os.Getenv("SEED_USER_PASSWORD")
-	if defaultPass == "" {
-		defaultPass = "admin123" // Default password for development
-	}
-
+	defaultPass := mustGetSeedPassword("SEED_USER_PASSWORD")
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(defaultPass), bcrypt.DefaultCost)
 
-	// Superadmin password (specific)
-	superadminPass := "Diego1989r$"
+	// Superadmin password from env
+	superadminPass := mustGetSeedPassword("SEED_SUPERADMIN_PASSWORD")
 	superadminHash, _ := bcrypt.GenerateFromPassword([]byte(superadminPass), bcrypt.DefaultCost)
 
 	log.Printf("🌱 Seeding users with password hash...")
@@ -69,7 +92,7 @@ func seedUsers() {
 	if err != nil {
 		log.Println("⚠️ Failed to seed superadmin:", err)
 	} else {
-		log.Println("✅ Superadmin created: superadmin@logitrack.com")
+		log.Println("✅ Superadmin checked/created: superadmin@logitrack.com")
 	}
 
 	// Seed other users

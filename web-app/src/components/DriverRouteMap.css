@@ -89,6 +89,126 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+/* Timestamp bajo marcadores ancla */
+.marker-time {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 400;
+  opacity: 0.9;
+  letter-spacing: 0;
+}
+
+/* Marcador de parada */
+.stop-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 16px;
+  cursor: default;
+  opacity: 0.75;
+  transition: opacity 0.2s;
+}
+.stop-marker:hover { opacity: 1; }
+.stop-label {
+  background: #374151;
+  color: #d1d5db;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.stop-badge { background: #374151; color: #d1d5db; }
+
+/* Tooltip de punto GPS */
+.route-point-popup .mapboxgl-popup-content {
+  background: #1f2937;
+  color: #f3f4f6;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  min-width: 130px;
+}
+.route-point-popup .mapboxgl-popup-tip { border-bottom-color: #1f2937; }
+.popup-content { display: flex; flex-direction: column; gap: 4px; }
+.popup-row { font-size: 0.8rem; display: flex; align-items: center; gap: 6px; }
+
+/* Layout con panel de segmentos */
+.route-map-body {
+  display: flex;
+  gap: 16px;
+}
+.route-map-body .route-map-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Panel lateral de segmentos */
+.segments-panel {
+  width: 260px;
+  flex-shrink: 0;
+  background: #1f2937;
+  border-radius: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 500px;
+}
+.segments-panel h4 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e5e7eb;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.segments-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.segment-item {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.segment-item:hover { border-color: #3b82f6; background: #1e3a5f; }
+.segment-item.active { border-color: #3b82f6; background: #1e3a5f; }
+.segment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.segment-num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+.segment-route {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+.segment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.segment-meta span {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  background: #1f2937;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.seg-stops { color: #f59e0b !important; }
+
 /* Leyenda */
 .route-legend {
   display: flex;
@@ -108,6 +228,19 @@
   font-size: 0.875rem;
 }
 
+.legend-dot {
+  display: inline-block;
+  width: 14px;
+  height: 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.legend-title {
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 600;
+  align-self: center;
+}
 .legend-icon {
   font-size: 18px;
 }

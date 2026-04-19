@@ -153,6 +153,9 @@ func UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
+	// Record KPI checkpoint
+	db.Exec("INSERT INTO kpis (order_id, checkpoint) VALUES ($1, $2)", id, status)
+
 	c.JSON(http.StatusOK, gin.H{"message": "Order status updated", "status": status})
 }
 
@@ -209,6 +212,9 @@ func AssignOrderToMoto(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
 	}
+
+	// Record KPI checkpoint if it was pending
+	db.Exec("INSERT INTO kpis (order_id, checkpoint) VALUES ($1, 'assigned')", id)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order assigned"})
 }

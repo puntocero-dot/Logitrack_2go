@@ -24,19 +24,19 @@ type Shift struct {
 }
 
 type RoutePoint struct {
-	ID        int        `json:"id"`
-	ShiftID   int        `json:"shift_id"`
-	Latitude  float64    `json:"latitude"`
-	Longitude float64    `json:"longitude"`
-	Accuracy  *float64   `json:"accuracy,omitempty"`
-	Speed     *float64   `json:"speed,omitempty"`
-	Heading   *float64   `json:"heading,omitempty"`
-	Altitude  *float64   `json:"altitude,omitempty"`
-	Timestamp time.Time  `json:"timestamp"`
-	PointType string     `json:"point_type"`
-	OrderID   *int       `json:"order_id,omitempty"`
-	Address   string     `json:"address,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
+	ID        int       `json:"id"`
+	ShiftID   int       `json:"shift_id"`
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
+	Accuracy  *float64  `json:"accuracy,omitempty"`
+	Speed     *float64  `json:"speed,omitempty"`
+	Heading   *float64  `json:"heading,omitempty"`
+	Altitude  *float64  `json:"altitude,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+	PointType string    `json:"point_type"`
+	OrderID   *int      `json:"order_id,omitempty"`
+	Address   string    `json:"address,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type StartShiftRequest struct {
@@ -205,8 +205,46 @@ func AddRoutePoint(c *gin.Context) {
 		return
 	}
 
+	// Actualizar distancia total del turno en background
+	go updateShiftDistance(shiftID, routePoint.Latitude, routePoint.Longitude)
+
 	c.JSON(http.StatusCreated, routePoint)
+
+	// Broadcast al hub de WebSocket para live tracking (supervisores/clientes en tiempo real)
+	LiveHub.Broadcast(shiftID, routePoint)
 }
+
+// updateShiftDistance calcula la distancia desde el último punto y actualiza el turno
+func updateShiftDistance(shiftID int, newLat, newLng float64) {
+	// 1. Obtener el penúltimo punto (el anterior al que acabamos de insertar)
+	var lastLat, lastLng float64
+	err := db.QueryRow(`
+		SELECT latitude, longitude FROM route_points 
+		WHERE shift_id = $1 AND id < (SELECT MAX(id) FROM route_points WHERE shift_id = $1)
+		ORDER BY id DESC LIMIT 1
+	`, shiftID).Scan(&lastLat, &lastLng)
+
+	if err != nil {
+		// Probablemente es el primer punto, no hay nada que calcular
+		return
+	}
+
+	// 2. Calcular distancia
+	dist := haversineDistance(lastLat, lastLng, newLat, newLng)
+
+	if dist > 0 {
+		// 3. Actualizar total_distance_km en shifts
+		_, err = db.Exec(`
+			UPDATE shifts SET total_distance_km = total_distance_km + $2, updated_at = NOW()
+			WHERE id = $1
+		`, shiftID, dist)
+		if err != nil {
+			// Log error (logging package could be used here)
+		}
+	}
+}
+
+// haversineDistance se encuentra en geo_utils.go (compartida con segments.go)
 
 // EndShift finaliza un turno
 func EndShift(c *gin.Context) {

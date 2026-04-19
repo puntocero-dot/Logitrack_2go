@@ -6,11 +6,11 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/logitrack/api-gateway/logging"
 	"github.com/logitrack/api-gateway/middleware"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -39,19 +39,11 @@ func main() {
 	r.Use(middleware.SecurityHeaders())
 
 	// 3. CORS estricto (solo orígenes permitidos)
+	// Los orígenes se cargan desde ALLOWED_ORIGINS (comma-separated) o defaults seguros
+	allowedOrigins := loadAllowedOrigins()
+
 	r.Use(func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-
-		// Lista de orígenes permitidos
-		allowedOrigins := map[string]bool{
-			"http://localhost:3001":    true, // web-app desarrollo
-			"http://localhost:3002":    true, // client-view desarrollo
-			"http://10.23.150.40:3001": true, // web-app LAN
-			"http://10.23.150.40:3002": true, // client-view LAN
-			// Railway production
-			"https://web-app-production-05a3.up.railway.app":     true,
-			"https://client-view-production-f0c1.up.railway.app": true,
-		}
 
 		if allowedOrigins[origin] {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
@@ -70,21 +62,12 @@ func main() {
 		c.Next()
 	})
 
-	// 4. Rate limiting (después de CORS)
-	r.Use(middleware.RateLimitMiddleware())
-
 	// 5. Métricas Prometheus (último para medir todo)
 	r.Use(middleware.MetricsMiddleware())
 
-	// Health check del gateway
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "service": "api-gateway"})
-	})
-
-	// Endpoint de métricas Prometheus
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
-	// ✅ URLs de servicios internos (Docker network)
+	// ========================================
+	// URLS DE SERVICIOS INTERNOS
+	// ========================================
 	userServiceURL := getEnv("USER_SERVICE_URL", "http://user-service:8081")
 	orderServiceURL := getEnv("ORDER_SERVICE_URL", "http://order-service:8080")
 	geoServiceURL := getEnv("GEO_SERVICE_URL", "http://geolocation-service:8083")
@@ -92,114 +75,115 @@ func main() {
 	integrationServiceURL := getEnv("INTEGRATION_SERVICE_URL", "http://integration-service:8084")
 
 	// ========================================
-	// ✅ RUTAS DE AUTENTICACIÓN (sin /auth prefix en destino)
+	// ✅ RUTAS PÚBLICAS
 	// ========================================
-	r.POST("/auth/login", proxyTo(userServiceURL, "/login"))
-	r.POST("/auth/refresh", proxyTo(userServiceURL, "/refresh"))
-	r.POST("/auth/logout", proxyTo(userServiceURL, "/logout"))
+	r.POST("/auth/login", middleware.RateLimitLogin(), proxyTo(userServiceURL, "/login"))
+	r.POST("/auth/refresh", middleware.RateLimitRefresh(), proxyTo(userServiceURL, "/refresh"))
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "service": "api-gateway"})
+	})
 
 	// ========================================
-	// ✅ RUTAS DE USUARIOS
+	// 🔐 RUTAS PROTEGIDAS (Requieren JWT)
 	// ========================================
-	r.GET("/users", proxyTo(userServiceURL, "/users"))
-	r.GET("/users/:id", proxyToWithParam(userServiceURL, "/users"))
-	r.POST("/users", proxyTo(userServiceURL, "/users"))
-	r.PUT("/users/:id", proxyToWithParam(userServiceURL, "/users"))
-	r.DELETE("/users/:id", proxyToWithParam(userServiceURL, "/users"))
-	r.GET("/auth/users", proxyTo(userServiceURL, "/users"))
-	r.GET("/auth/users/:id", proxyToWithParam(userServiceURL, "/users"))
-	r.POST("/auth/users", proxyTo(userServiceURL, "/users"))
-	r.PUT("/auth/users/:id", proxyToWithParam(userServiceURL, "/users"))
-	r.DELETE("/auth/users/:id", proxyToWithParam(userServiceURL, "/users"))
+	protected := r.Group("/")
+	protected.Use(middleware.RateLimitMiddleware())
+	protected.Use(middleware.AuthMiddleware())
+	{
+		// RUTAS DE USUARIOS (Solo Admin)
+		adminOnly := protected.Group("/")
+		adminOnly.Use(middleware.RoleMiddleware("admin"))
+		{
+			adminOnly.GET("/users", proxyTo(userServiceURL, "/users"))
+			adminOnly.GET("/users/:id", proxyToWithParam(userServiceURL, "/users"))
+			adminOnly.POST("/users", proxyTo(userServiceURL, "/users"))
+			adminOnly.PUT("/users/:id", proxyToWithParam(userServiceURL, "/users"))
+			adminOnly.DELETE("/users/:id", proxyToWithParam(userServiceURL, "/users"))
+			// Alias antiguos
+			adminOnly.GET("/auth/users", proxyTo(userServiceURL, "/users"))
+			adminOnly.GET("/auth/users/:id", proxyToWithParam(userServiceURL, "/users"))
+			adminOnly.POST("/auth/users", proxyTo(userServiceURL, "/users"))
+			adminOnly.PUT("/auth/users/:id", proxyToWithParam(userServiceURL, "/users"))
+			adminOnly.DELETE("/auth/users/:id", proxyToWithParam(userServiceURL, "/users"))
 
-	// ========================================
-	// ✅ RUTAS DE PEDIDOS
-	// ========================================
-	r.GET("/orders", proxyTo(orderServiceURL, "/orders"))
-	r.GET("/orders/:id", proxyToWithParam(orderServiceURL, "/orders"))
-	r.POST("/orders", proxyTo(orderServiceURL, "/orders"))
-	r.PUT("/orders/:id/status", proxyToWithNestedParam(orderServiceURL, "/orders", "/status"))
-	r.PUT("/orders/:id/assign", proxyToWithNestedParam(orderServiceURL, "/orders", "/assign"))
-	r.GET("/orders/:id/eta", proxyToWithNestedParam(orderServiceURL, "/orders", "/eta"))
-	r.POST("/orders/:id/delivery-proof", proxyToWithNestedParam(orderServiceURL, "/orders", "/delivery-proof"))
-	r.GET("/orders/:id/delivery-proof", proxyToWithNestedParam(orderServiceURL, "/orders", "/delivery-proof"))
+			// Gestión de Sucursales (Admin/Superadmin)
+			adminOnly.POST("/branches", proxyTo(orderServiceURL, "/branches"))
+			adminOnly.PUT("/branches/:id", proxyToWithParam(orderServiceURL, "/branches"))
+			adminOnly.DELETE("/branches/:id", proxyToWithParam(orderServiceURL, "/branches"))
+			adminOnly.PUT("/branches/:id/toggle", proxyToWithNestedParam(orderServiceURL, "/branches", "/toggle"))
 
-	// ========================================
-	// ✅ RUTAS DE MOTOS
-	// ========================================
-	r.GET("/motos", proxyTo(orderServiceURL, "/motos"))
-	r.GET("/motos/available", proxyTo(orderServiceURL, "/motos/available"))
-	r.GET("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
-	r.POST("/motos", proxyTo(orderServiceURL, "/motos"))
-	r.PUT("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
-	r.PUT("/motos/:id/location", proxyToWithNestedParam(orderServiceURL, "/motos", "/location"))
-	r.PUT("/motos/:id/status", proxyToWithNestedParam(orderServiceURL, "/motos", "/status"))
-	r.DELETE("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
+			// Integraciones (Solo Admin)
+			adminOnly.GET("/integrations", proxyTo(integrationServiceURL, "/integrations"))
+			adminOnly.POST("/integrations", proxyTo(integrationServiceURL, "/integrations"))
+			adminOnly.PUT("/integrations/:id", proxyToWithParam(integrationServiceURL, "/integrations"))
+			adminOnly.DELETE("/integrations/:id", proxyToWithParam(integrationServiceURL, "/integrations"))
+			adminOnly.POST("/sync/:id", proxyToWithParam(integrationServiceURL, "/sync"))
+			adminOnly.GET("/sync/status/:id", proxyToWithNestedParam(integrationServiceURL, "/sync/status", ""))
+			adminOnly.POST("/import/orders", proxyTo(integrationServiceURL, "/import/orders"))
+		}
 
-	// ========================================
-	// ✅ RUTAS DE SUCURSALES (BRANCHES)
-	// ========================================
-	r.GET("/branches", proxyTo(orderServiceURL, "/branches"))
-	r.GET("/branches/all", proxyTo(orderServiceURL, "/branches/all"))
-	r.POST("/branches", proxyTo(orderServiceURL, "/branches"))
-	r.PUT("/branches/:id", proxyToWithParam(orderServiceURL, "/branches"))
-	r.DELETE("/branches/:id", proxyToWithParam(orderServiceURL, "/branches"))
-	r.PUT("/branches/:id/toggle", proxyToWithNestedParam(orderServiceURL, "/branches", "/toggle"))
+		// RUTAS DE PEDIDOS (Operativos)
+		protected.GET("/orders", proxyTo(orderServiceURL, "/orders"))
+		protected.GET("/orders/:id", proxyToWithParam(orderServiceURL, "/orders"))
+		protected.POST("/orders", proxyTo(orderServiceURL, "/orders"))
+		protected.PUT("/orders/:id/status", proxyToWithNestedParam(orderServiceURL, "/orders", "/status"))
+		protected.PUT("/orders/:id/assign", proxyToWithNestedParam(orderServiceURL, "/orders", "/assign"))
+		protected.GET("/orders/:id/eta", proxyToWithNestedParam(orderServiceURL, "/orders", "/eta"))
+		protected.POST("/orders/:id/delivery-proof", proxyToWithNestedParam(orderServiceURL, "/orders", "/delivery-proof"))
+		protected.GET("/orders/:id/delivery-proof", proxyToWithNestedParam(orderServiceURL, "/orders", "/delivery-proof"))
 
-	// ========================================
-	// ✅ RUTAS DE OPTIMIZACIÓN
-	// ========================================
-	r.GET("/optimization/assignments", proxyTo(orderServiceURL, "/optimization/assignments"))
-	r.POST("/optimization/apply", proxyTo(orderServiceURL, "/optimization/apply"))
+		// RUTAS DE MOTOS
+		protected.GET("/motos", proxyTo(orderServiceURL, "/motos"))
+		protected.GET("/motos/available", proxyTo(orderServiceURL, "/motos/available"))
+		protected.GET("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
+		protected.POST("/motos", proxyTo(orderServiceURL, "/motos"))
+		protected.PUT("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
+		protected.PUT("/motos/:id/location", proxyToWithNestedParam(orderServiceURL, "/motos", "/location"))
+		protected.PUT("/motos/:id/status", proxyToWithNestedParam(orderServiceURL, "/motos", "/status"))
+		protected.DELETE("/motos/:id", proxyToWithParam(orderServiceURL, "/motos"))
 
-	// ========================================
-	// ✅ RUTAS DE KPIs (Dashboard Gerencial)
-	// ========================================
-	r.GET("/kpis/motos", proxyTo(orderServiceURL, "/kpis/motos"))
-	r.GET("/kpis/branches", proxyTo(orderServiceURL, "/kpis/branches"))
+		// RUTAS DE SUCURSALES (Lectura)
+		protected.GET("/branches", proxyTo(orderServiceURL, "/branches"))
+		protected.GET("/branches/all", proxyTo(orderServiceURL, "/branches/all"))
 
-	// ========================================
-	// ✅ RUTAS DE COORDINADORES (Visitas y Checklist)
-	// ========================================
-	r.POST("/visits/check-in", proxyTo(orderServiceURL, "/visits/check-in"))
-	r.PUT("/visits/:id/check-out", proxyToWithNestedParam(orderServiceURL, "/visits", "/check-out"))
-	r.GET("/visits/active", proxyTo(orderServiceURL, "/visits/active"))
-	r.GET("/visits/all-active", proxyTo(orderServiceURL, "/visits/all-active"))
-	r.GET("/visits", proxyTo(orderServiceURL, "/visits"))
-	r.GET("/checklist/templates", proxyTo(orderServiceURL, "/checklist/templates"))
-	r.POST("/visits/:id/checklist", proxyToWithNestedParam(orderServiceURL, "/visits", "/checklist"))
-	r.GET("/visits/:id/checklist", proxyToWithNestedParam(orderServiceURL, "/visits", "/checklist"))
+		// RUTAS DE OPTIMIZACIÓN
+		protected.GET("/optimization/assignments", proxyTo(orderServiceURL, "/optimization/assignments"))
+		protected.POST("/optimization/apply", proxyTo(orderServiceURL, "/optimization/apply"))
 
-	// ========================================
-	// ✅ RUTAS DE TRANSFERENCIAS (Motos entre Sucursales)
-	// ========================================
-	r.POST("/transfers", proxyTo(orderServiceURL, "/transfers"))
-	r.PUT("/motos/:id/return", proxyToWithNestedParam(orderServiceURL, "/motos", "/return"))
-	r.GET("/transfers", proxyTo(orderServiceURL, "/transfers"))
-	r.GET("/transfers/history", proxyTo(orderServiceURL, "/transfers/history"))
-	r.POST("/transfers/expire", proxyTo(orderServiceURL, "/transfers/expire"))
+		// RUTAS DE KPIs
+		protected.GET("/kpis/motos", proxyTo(orderServiceURL, "/kpis/motos"))
+		protected.GET("/kpis/branches", proxyTo(orderServiceURL, "/kpis/branches"))
 
-	// ========================================
-	// ✅ RUTAS DE GEOLOCALIZACIÓN (wildcard)
-	// ========================================
-	r.Any("/geo/*path", proxyWildcard(geoServiceURL))
+		// RUTAS DE COORDINADORES
+		protected.POST("/visits/check-in", proxyTo(orderServiceURL, "/visits/check-in"))
+		protected.PUT("/visits/:id/check-out", proxyToWithNestedParam(orderServiceURL, "/visits", "/check-out"))
+		protected.GET("/visits/active", proxyTo(orderServiceURL, "/visits/active"))
+		protected.GET("/visits/all-active", proxyTo(orderServiceURL, "/visits/all-active"))
+		protected.GET("/visits", proxyTo(orderServiceURL, "/visits"))
+		protected.GET("/checklist/templates", proxyTo(orderServiceURL, "/checklist/templates"))
+		protected.POST("/visits/:id/checklist", proxyToWithNestedParam(orderServiceURL, "/visits", "/checklist"))
+		protected.GET("/visits/:id/checklist", proxyToWithNestedParam(orderServiceURL, "/visits", "/checklist"))
 
-	// ========================================
-	// ✅ RUTAS DE IA (wildcard)
-	// ========================================
-	r.Any("/ai/*path", proxyWildcard(aiServiceURL))
+		// RUTAS DE TRANSFERENCIAS
+		protected.POST("/transfers", proxyTo(orderServiceURL, "/transfers"))
+		protected.PUT("/motos/:id/return", proxyToWithNestedParam(orderServiceURL, "/motos", "/return"))
+		protected.GET("/transfers", proxyTo(orderServiceURL, "/transfers"))
+		protected.GET("/transfers/history", proxyTo(orderServiceURL, "/transfers/history"))
+		protected.POST("/transfers/expire", proxyTo(orderServiceURL, "/transfers/expire"))
 
-	// ========================================
-	// ✅ RUTAS DE INTEGRACIÓN (conexión con sistemas externos)
-	// ========================================
-	r.GET("/integrations", proxyTo(integrationServiceURL, "/integrations"))
-	r.POST("/integrations", proxyTo(integrationServiceURL, "/integrations"))
-	r.PUT("/integrations/:id", proxyToWithParam(integrationServiceURL, "/integrations"))
-	r.DELETE("/integrations/:id", proxyToWithParam(integrationServiceURL, "/integrations"))
-	r.POST("/sync/:id", proxyToWithParam(integrationServiceURL, "/sync"))
-	r.GET("/sync/status/:id", proxyToWithNestedParam(integrationServiceURL, "/sync/status", ""))
-	r.POST("/webhook/:name", proxyToWithParam(integrationServiceURL, "/webhook"))
-	r.POST("/import/orders", proxyTo(integrationServiceURL, "/import/orders"))
+		// RUTAS DE GEOLOCALIZACIÓN Y IA
+		protected.Any("/geo/*path", proxyWildcard(geoServiceURL))
+		protected.Any("/ai/*path", proxyWildcard(aiServiceURL))
+
+		// NOTA: /geo/shifts/:id/live (WebSocket) pasa por el wildcard anterior.
+		// El geolocation-service valida el JWT via ?token= query param internamente,
+		// por lo que el AuthMiddleware HTTP del gateway también lo cubre (token en header).
+		// Si el cliente WS no puede enviar el header, el token como query param
+		// lo valida el geolocation-service directamente.
+
+		// Webhooks (deben ser protegidos o tener su propia validación)
+		protected.POST("/webhook/:name", proxyToWithParam(integrationServiceURL, "/webhook"))
+	}
 
 	// Iniciar servidor
 	port := getEnv("PORT", "8080")
@@ -316,6 +300,33 @@ func proxyWildcard(targetBase string) gin.HandlerFunc {
 		c.Request.Host = targetURL.Host
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
+}
+
+// loadAllowedOrigins parsea la env var ALLOWED_ORIGINS (comma-separated) una sola vez al arranque.
+// Si está vacía, usa los orígenes por defecto (desarrollo local + producción Railway).
+// Retorna map[string]bool para O(1) lookup en cada request.
+func loadAllowedOrigins() map[string]bool {
+	env := os.Getenv("ALLOWED_ORIGINS")
+	if env == "" {
+		// Defaults: 4 locales + 2 Railway (no romper dev ni prod si la var no está seteada)
+		return map[string]bool{
+			"http://localhost:3001":    true, // web-app desarrollo
+			"http://localhost:3002":    true, // client-view desarrollo
+			"http://10.23.150.40:3001": true, // web-app LAN
+			"http://10.23.150.40:3002": true, // client-view LAN
+			// Railway producción
+			"https://web-app-production-05a3.up.railway.app":     true,
+			"https://client-view-production-f0c1.up.railway.app": true,
+		}
+	}
+	origins := make(map[string]bool)
+	for _, o := range strings.Split(env, ",") {
+		trimmed := strings.TrimSpace(o)
+		if trimmed != "" {
+			origins[trimmed] = true
+		}
+	}
+	return origins
 }
 
 // getEnv obtiene variable de entorno con valor por defecto

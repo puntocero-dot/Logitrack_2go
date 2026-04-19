@@ -5,6 +5,9 @@ services:
       - "8085:8080"
     environment:
       - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - ENV=${ENV}
     depends_on:
       - redis
 
@@ -16,6 +19,9 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REDIS_URL=${REDIS_URL}
+      - SEED_SUPERADMIN_PASSWORD=${SEED_SUPERADMIN_PASSWORD}
+      - SEED_USER_PASSWORD=${SEED_USER_PASSWORD}
+      - ENV=${ENV}
     depends_on:
       - redis
       - postgres
@@ -26,6 +32,10 @@ services:
       - "${PORT_ORDER}:8082"
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - MAPBOX_TOKEN=${MAPBOX_TOKEN}
+      - ENV=${ENV}
+    depends_on:
+      - postgres
 
   geolocation-service:
     build: ./geolocation-service
@@ -33,11 +43,22 @@ services:
       - "${PORT_GEO}:8083"
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - ENV=${ENV}
+    depends_on:
+      - postgres
 
   ai-service:
     build: ./ai-service
     ports:
       - "${PORT_AI}:5000"
+    environment:
+      - ENV=${ENV}
+      - MODEL_DIR=/app/models
+    volumes:
+      # Persistir modelos ML entrenados entre reinicios del contenedor
+      - ai_models:/app/models
 
   web-app:
     build: ./web-app
@@ -52,8 +73,9 @@ services:
   integration-service:
     build: ./integration-service
     environment:
-      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable
-      ORDER_SERVICE_URL: http://order-service:8080
+      - DATABASE_URL=${DATABASE_URL}
+      - ORDER_SERVICE_URL=http://order-service:8080
+      - ENV=${ENV}
     ports:
       - "8089:8084"
     depends_on:
@@ -83,3 +105,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  ai_models:    # Modelos ML entrenados (RandomForest ETA, IsolationForest anomalías)

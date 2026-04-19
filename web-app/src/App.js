@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import axios from 'axios';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import SupervisorDashboard from './components/SupervisorDashboard';
 import AdminMotos from './components/AdminMotos';
 import DriverDashboard from './components/DriverDashboard';
@@ -60,16 +60,52 @@ function RoleRoute({ children, allowedRoles }) {
   return children;
 }
 
+function MobileTopBar({ onMenuOpen }) {
+  return (
+    <div className="mobile-topbar">
+      <button className="mobile-topbar__menu-btn" onClick={onMenuOpen} aria-label="Abrir menú">
+        ☰
+      </button>
+      <span className="mobile-topbar__title">Logitrack</span>
+      <div style={{ width: 36 }} />
+    </div>
+  );
+}
+
 function AppLayout({ children }) {
   const { user } = useAuth();
   const location = useLocation();
-  const showNavbar = user && location.pathname !== '/login';
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const isAuth = !user || location.pathname === '/login';
+
+  if (isAuth) {
+    return <div className="app-shell--auth">{children}</div>;
+  }
 
   return (
-    <>
-      {showNavbar && <Navbar />}
-      {children}
-    </>
+    <div className="app-shell">
+      {/* Sidebar */}
+      <Sidebar mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+
+      {/* Overlay backdrop on mobile */}
+      {sidebarOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+            zIndex: 250,
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main content */}
+      <div className="main-content">
+        <MobileTopBar onMenuOpen={() => setSidebarOpen(true)} />
+        <div className="page-body">
+          {children}
+        </div>
+      </div>
+    </div>
   );
 }
 

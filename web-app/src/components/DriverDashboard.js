@@ -25,7 +25,7 @@ const DriverDashboard = () => {
     } catch (err) {
       console.error('Error fetching my moto', err);
       setMyMoto(null);
-      return null;
+      throw err; // Re-throw to be caught by fetchData
     }
   }, [driverId]);
 
@@ -42,19 +42,32 @@ const DriverDashboard = () => {
     } catch (err) {
       console.error('Error fetching orders', err);
       setOrders([]);
+      throw err; // Re-throw to be caught by fetchData
     }
   }, []);
 
+  const authFailedRef = React.useRef(false);
+
   useEffect(() => {
     const fetchData = async () => {
-      if (!driverId) {
-        setLoading(false);
+      if (!driverId || authFailedRef.current) {
+        if (!driverId) setLoading(false);
         return;
       }
       setLoading(true);
-      const moto = await fetchMyMoto();
-      await fetchMyOrders(moto);
-      setLoading(false);
+      try {
+        const moto = await fetchMyMoto();
+        if (!authFailedRef.current) { // Check again in case it got set during fetchMyMoto
+           await fetchMyOrders(moto);
+        }
+      } catch (err) {
+        if (err?.response?.status === 401) {
+          authFailedRef.current = true;
+          console.warn('[DriverDashboard] Auth failed — polling detenido');
+        }
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();

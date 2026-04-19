@@ -90,20 +90,16 @@ CREATE TABLE IF NOT EXISTS routes (
 CREATE INDEX IF NOT EXISTS idx_routes_moto ON routes(moto_id);
 CREATE INDEX IF NOT EXISTS idx_routes_created ON routes(created_at);
 
--- Tabla de KPIs
+-- Tabla de KPIs (checkpoints por pedido)
 CREATE TABLE IF NOT EXISTS kpis (
     id SERIAL PRIMARY KEY,
-    date DATE NOT NULL,
-    total_orders INTEGER DEFAULT 0,
-    delivered_orders INTEGER DEFAULT 0,
-    cancelled_orders INTEGER DEFAULT 0,
-    avg_delivery_time INTEGER,
-    total_distance DECIMAL(10, 2),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    order_id INTEGER REFERENCES orders(id),
+    checkpoint VARCHAR(50) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Índices para kpis
-CREATE INDEX IF NOT EXISTS idx_kpis_date ON kpis(date);
+CREATE INDEX IF NOT EXISTS idx_kpis_order_id ON kpis(order_id);
 
 -- Insertar usuarios por defecto si no existen
 INSERT INTO users (email, password_hash, role)

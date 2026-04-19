@@ -59,7 +59,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
-  // ── Interceptor global (se re-registra cada vez que cambia el token) ──
+  // ── Interceptor global: se registra UNA SOLA VEZ al montar ──
+  // No usar [token] como dependencia — causaría que los interceptors se
+  // eyecten justo cuando el dashboard dispara sus primeras requests (race condition).
+  // El interceptor lee localStorage dinámicamente así que siempre tiene el token fresco.
   useEffect(() => {
     const reqId = axios.interceptors.request.use((config) => {
       const t = localStorage.getItem('token');
@@ -83,7 +86,7 @@ export const AuthProvider = ({ children }) => {
       axios.interceptors.request.eject(reqId);
       axios.interceptors.response.eject(resId);
     };
-  }, [token]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (token && !user) {

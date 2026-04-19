@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { USER_API_BASE_URL } from '../config/api';
+import { USER_API_BASE_URL, ORDER_API_BASE_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import './UsersManagement.css';
 import BulkUpload from './BulkUpload';
@@ -9,6 +9,7 @@ const UsersManagement = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [motos, setMotos] = useState([]);          // para mostrar moto asignada al driver
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -22,21 +23,24 @@ const UsersManagement = () => {
     active: true,
   });
   const [message, setMessage] = useState({ type: '', text: '' });
+  const formRef = useRef(null);   // para scroll automático al editar
 
   const roles = [
-    { value: 'superadmin', label: 'Super Admin', description: 'Control total del sistema' },
-    { value: 'admin', label: 'Admin', description: 'Gestión completa' },
-    { value: 'manager', label: 'Gerente', description: 'Vista gerencial y reportes' },
-    { value: 'supervisor', label: 'Supervisor', description: 'Supervisión de operaciones' },
+    { value: 'superadmin', label: 'Super Admin',  description: 'Control total del sistema' },
+    { value: 'admin',      label: 'Admin',         description: 'Gestión completa' },
+    { value: 'manager',    label: 'Gerente',        description: 'Vista gerencial y reportes' },
+    { value: 'supervisor', label: 'Supervisor',     description: 'Supervisión de operaciones' },
     { value: 'coordinator', label: 'Coordinador', description: 'Visitas y check-ins' },
-    { value: 'analyst', label: 'Analista', description: 'Análisis y reportes' },
-    { value: 'operator', label: 'Operador', description: 'Operaciones básicas' },
-    { value: 'driver', label: 'Conductor', description: 'Entregas y rutas' },
+    { value: 'analyst',     label: 'Analista',     description: 'Análisis y reportes' },
+    { value: 'operator',    label: 'Operador',      description: 'Operaciones básicas' },
+    { value: 'driver',      label: 'Conductor',     description: 'Entregas y rutas' },
+    { value: 'client',      label: 'Cliente',       description: 'Acceso de cliente' },
   ];
 
   useEffect(() => {
     fetchUsers();
     fetchBranches();
+    fetchMotos();
   }, []);
 
   const fetchUsers = async () => {
@@ -53,7 +57,6 @@ const UsersManagement = () => {
 
   const fetchBranches = async () => {
     try {
-      // Branches endpoint is at /branches via the gateway
       const res = await axios.get(`${USER_API_BASE_URL}/branches`);
       setBranches(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
@@ -61,6 +64,20 @@ const UsersManagement = () => {
       setBranches([]);
     }
   };
+
+  const fetchMotos = async () => {
+    try {
+      const res = await axios.get(`${ORDER_API_BASE_URL}/motos`);
+      setMotos(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Error fetching motos', err);
+      setMotos([]);
+    }
+  };
+
+  // Devuelve la moto asignada a un driver (por driver_id = user.id)
+  const getMotoForDriver = (userId) =>
+    motos.find(m => m.driver_id === userId) || null;
 
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -124,6 +141,10 @@ const UsersManagement = () => {
     });
     setEditing(user);
     setShowForm(true);
+    // Scroll al formulario para que el usuario lo vea
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   const handleToggleActive = async (user) => {
@@ -257,8 +278,8 @@ const UsersManagement = () => {
 
       {/* Formulario de creación/edición */}
       {showForm && (
-        <div className="user-form-card">
-          <h3>{editing ? '✏️ Editar Usuario' : '➕ Crear Nuevo Usuario'}</h3>
+        <div className="user-form-card" ref={formRef}>
+          <h3>{editing ? `✏️ Editar: ${editing.name || editing.email}` : '➕ Crear Nuevo Usuario'}</h3>
           <form onSubmit={handleSubmit} className="user-form">
             <div className="form-row">
               <div className="form-group">
@@ -413,6 +434,7 @@ const UsersManagement = () => {
               <th>Email</th>
               <th>Rol</th>
               <th>Sucursal</th>
+              <th>Moto asignada</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -436,6 +458,24 @@ const UsersManagement = () => {
                 </td>
                 <td>
                   {branches.find(b => b.id === user.branch_id)?.name || '-'}
+                </td>
+                <td>
+                  {user.role === 'driver' ? (() => {
+                    const moto = getMotoForDriver(user.id);
+                    return moto
+                      ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span>🏍️</span>
+                          <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>{moto.license_plate}</span>
+                          <span style={{
+                            fontSize: '0.7rem', padding: '1px 6px', borderRadius: 4,
+                            background: moto.status === 'available'
+                              ? 'var(--color-success-subtle)' : 'var(--color-info-subtle)',
+                            color: moto.status === 'available'
+                              ? 'var(--color-success)' : 'var(--color-info)',
+                          }}>{moto.status}</span>
+                        </span>
+                      : <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Sin moto</span>;
+                  })() : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                 </td>
                 <td>
                   <span className={`status-badge ${user.active !== false ? 'status-active' : 'status-inactive'}`}>
@@ -473,7 +513,7 @@ const UsersManagement = () => {
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan="6" className="empty-row">
+                <td colSpan="7" className="empty-row">
                   No se encontraron usuarios con los filtros aplicados.
                 </td>
               </tr>

@@ -17,6 +17,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import ReportsDashboard from './components/ReportsDashboard';
 import BranchesManagement from './components/BranchesManagement';
 import Login from './components/Login';
+import Landing from './components/Landing';
 import './styles.css';
 
 // Axios interceptor to include token
@@ -76,7 +77,7 @@ function AppLayout({ children }) {
   const { user } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const isAuth = !user || location.pathname === '/login';
+  const isAuth = !user || location.pathname === '/login' || location.pathname === '/';
 
   if (isAuth) {
     return <div className="app-shell--auth">{children}</div>;
@@ -137,7 +138,9 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      {/* Landing page for unauthenticated users, or dashboard if already logged in */}
+      <Route path="/" element={!user ? <Landing /> : <Navigate to={getHomeRoute()} replace />} />
+      <Route path="/login" element={!user ? <Login /> : <Navigate to={getHomeRoute()} replace />} />
 
       {/* Dashboard Supervisor (acceso: admin, supervisor, manager) */}
       <Route

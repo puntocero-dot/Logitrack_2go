@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
+
   const decodeToken = (rawToken) => {
     try {
       const payload = rawToken.split('.')[1];
@@ -57,6 +58,32 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('token');
   };
+
+  // ── Interceptor global (se re-registra cada vez que cambia el token) ──
+  useEffect(() => {
+    const reqId = axios.interceptors.request.use((config) => {
+      const t = localStorage.getItem('token');
+      if (t) config.headers['Authorization'] = `Bearer ${t}`;
+      return config;
+    });
+
+    const resId = axios.interceptors.response.use(
+      (res) => res,
+      (error) => {
+        const isLogin = error.config?.url?.includes('/auth/login');
+        if (error.response?.status === 401 && !isLogin) {
+          localStorage.removeItem('token');
+          window.location.href = '/';
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.request.eject(reqId);
+      axios.interceptors.response.eject(resId);
+    };
+  }, [token]);
 
   useEffect(() => {
     if (token && !user) {

@@ -2,6 +2,46 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { AUTH_API_BASE_URL } from '../config/api';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERCEPTORS A NIVEL DE MÓDULO
+// Se registran UNA SOLA VEZ cuando el archivo se importa por primera vez,
+// ANTES de que cualquier componente React se monte o ejecute un useEffect.
+// Esto elimina la race condition donde los hijos disparan requests antes de
+// que el useEffect del AuthProvider registre los interceptors.
+// ─────────────────────────────────────────────────────────────────────────────
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Interceptor de respuesta: solo logea el 401, NO redirige automáticamente.
+// El redirect agresivo causaba que el usuario fuera expulsado en ~1 seg
+// por 401s transitorios mientras los componentes cargaban.
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const isLogin = error.config?.url?.includes('/auth/login');
+      // Solo limpiar y redirigir si el token existe pero es inválido/expirado
+      // y NO es el endpoint de login (para evitar loops)
+      if (!isLogin && localStorage.getItem('token')) {
+        const url = error.config?.url || '';
+        console.warn(`[Auth] 401 en ${url} — token podría estar expirado`);
+        // No redirigimos aquí: dejamos que cada componente maneje su error.
+        // App.js o el router protegido verifican si hay token al renderizar.
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+// ─────────────────────────────────────────────────────────────────────────────
+
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
@@ -9,7 +49,6 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
-
 
   const decodeToken = (rawToken) => {
     try {
@@ -25,20 +64,18 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const res = await axios.post(`${AUTH_API_BASE_URL}/login`, { email, password });
-      // El API devuelve access_token y user (no solo token)
       const rawToken = res.data.access_token || res.data.token;
       const userData = res.data.user;
 
+      localStorage.setItem('token', rawToken); // primero localStorage
       setToken(rawToken);
-      localStorage.setItem('token', rawToken);
 
-      // Usar datos del user si existe, sino decodificar token
       if (userData && userData.role) {
         setUser({
           id: userData.id,
           email: userData.email,
           name: userData.name,
-          role: userData.role
+          role: userData.role,
         });
       } else {
         const claims = decodeToken(rawToken);
@@ -59,43 +96,18 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
-  // ── Interceptor global: se registra UNA SOLA VEZ al montar ──
-  // No usar [token] como dependencia — causaría que los interceptors se
-  // eyecten justo cuando el dashboard dispara sus primeras requests (race condition).
-  // El interceptor lee localStorage dinámicamente así que siempre tiene el token fresco.
-  useEffect(() => {
-    const reqId = axios.interceptors.request.use((config) => {
-      const t = localStorage.getItem('token');
-      if (t) config.headers['Authorization'] = `Bearer ${t}`;
-      return config;
-    });
-
-    const resId = axios.interceptors.response.use(
-      (res) => res,
-      (error) => {
-        const isLogin = error.config?.url?.includes('/auth/login');
-        if (error.response?.status === 401 && !isLogin) {
-          localStorage.removeItem('token');
-          window.location.href = '/';
-        }
-        return Promise.reject(error);
-      }
-    );
-
-    return () => {
-      axios.interceptors.request.eject(reqId);
-      axios.interceptors.response.eject(resId);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
+  // Restaurar usuario desde token al recargar la página
   useEffect(() => {
     if (token && !user) {
       const claims = decodeToken(token);
       if (claims) {
         setUser({ id: claims.user_id, role: claims.role });
+      } else {
+        // Token corrupto → limpiar
+        logout();
       }
     }
-  }, [token, user]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>

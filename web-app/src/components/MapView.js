@@ -77,7 +77,7 @@ const MapView = ({ orders, motos }) => {
 
   const defaultCenter = useMemo(() => {
     if (allPoints.length === 0) {
-      return [14.6349, -90.5069]; // Guatemala City
+      return [13.6929, -89.2182]; // San Salvador, El Salvador
     }
     const avgLat = allPoints.reduce((sum, p) => sum + p.latitude, 0) / allPoints.length;
     const avgLng = allPoints.reduce((sum, p) => sum + p.longitude, 0) / allPoints.length;

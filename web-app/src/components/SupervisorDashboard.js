@@ -27,45 +27,54 @@ const SupervisorDashboard = () => {
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
 
+  const fetchOrders = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const branch = user.role === 'supervisor' ? user.branch : undefined;
+      const url = branch ? `${ORDER_API_BASE_URL}/orders?branch=${branch}` : `${ORDER_API_BASE_URL}/orders`;
+      const res = await axios.get(url);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setOrders(data);
+    } catch (err) {
+      console.error('Error fetching orders', err);
+      setOrders([]);
+    }
+  };
+
+  const fetchMotos = async () => {
+    try {
+      const res = await axios.get(`${ORDER_API_BASE_URL}/motos`);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setMotos(data);
+    } catch (err) {
+      console.error('Error fetching motos', err);
+      setMotos([]);
+    }
+  };
+
+  const fetchMotoKPIs = async () => {
+    try {
+      const res = await axios.get(`${ORDER_API_BASE_URL}/kpis/motos`);
+      setMotoKPIs(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Error fetching moto KPIs', err);
+      setMotoKPIs([]);
+    }
+  };
+
+  // Fetch inicial + auto-refresh cada 15 segundos
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const branch = user.role === 'supervisor' ? user.branch : undefined;
-        const url = branch ? `${ORDER_API_BASE_URL}/orders?branch=${branch}` : `${ORDER_API_BASE_URL}/orders`;
-        const res = await axios.get(url);
-        const data = Array.isArray(res.data) ? res.data : [];
-        setOrders(data);
-      } catch (err) {
-        console.error('Error fetching orders', err);
-        setOrders([]);
-      }
-    };
-
-    const fetchMotos = async () => {
-      try {
-        const res = await axios.get(`${ORDER_API_BASE_URL}/motos`);
-        const data = Array.isArray(res.data) ? res.data : [];
-        setMotos(data);
-      } catch (err) {
-        console.error('Error fetching motos', err);
-        setMotos([]);
-      }
-    };
-
-    const fetchMotoKPIs = async () => {
-      try {
-        const res = await axios.get(`${ORDER_API_BASE_URL}/kpis/motos`);
-        setMotoKPIs(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error('Error fetching moto KPIs', err);
-        setMotoKPIs([]);
-      }
-    };
-
     fetchOrders();
     fetchMotos();
     fetchMotoKPIs();
+
+    const interval = setInterval(() => {
+      fetchOrders();
+      fetchMotos();
+      fetchMotoKPIs();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleOrderChange = (e) => {
@@ -84,16 +93,16 @@ const SupervisorDashboard = () => {
         client_name: orderForm.client_name || 'Cliente sin nombre',
         client_email: orderForm.client_email || null,
         address: orderForm.address || 'Sin dirección',
-        latitude: orderForm.latitude ? parseFloat(orderForm.latitude) : 10.0,
-        longitude: orderForm.longitude ? parseFloat(orderForm.longitude) : -75.0,
+        latitude: orderForm.latitude ? parseFloat(orderForm.latitude) : 13.6929,
+        longitude: orderForm.longitude ? parseFloat(orderForm.longitude) : -89.2182,
         branch,
       };
 
-      const res = await axios.post(`${ORDER_API_BASE_URL}/orders`, payload);
-      const newOrder = res.data;
-      setOrders(prev => [...prev, newOrder]);
-      setOrderMessage('Pedido creado.');
+      await axios.post(`${ORDER_API_BASE_URL}/orders`, payload);
+      setOrderMessage('✅ Pedido creado exitosamente.');
       setOrderForm({ client_name: '', client_email: '', address: '', latitude: '', longitude: '' });
+      // Refrescar datos inmediatamente para que aparezca al instante
+      await fetchOrders();
     } catch (err) {
       setOrderMessage('Error: ' + (err.response?.data?.error || err.message));
     }

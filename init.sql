@@ -34,9 +34,9 @@ CREATE INDEX IF NOT EXISTS idx_branches_active ON branches(is_active);
 
 -- Insertar sucursales por defecto (Guatemala Ciudad como ejemplo)
 INSERT INTO branches (name, code, address, latitude, longitude, radius_km) VALUES
-    ('Central', 'central', 'Zona 1, Guatemala Ciudad', 14.6349, -90.5069, 15.0),
-    ('Zona Norte', 'norte', 'Zona 18, Guatemala Ciudad', 14.6800, -90.4800, 10.0),
-    ('Zona Sur', 'sur', 'Zona 12, Guatemala Ciudad', 14.5900, -90.5200, 10.0)
+    ('Central', 'central', 'San Salvador Centro', 13.6929, -89.2182, 15.0),
+    ('Zona Norte', 'norte', 'San Salvador Norte', 13.7200, -89.2000, 10.0),
+    ('Zona Sur', 'sur', 'San Salvador Sur', 13.6700, -89.2400, 10.0)
 ON CONFLICT (code) DO NOTHING;
 
 -- ============================================

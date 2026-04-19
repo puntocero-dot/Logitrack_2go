@@ -78,16 +78,13 @@ func seedUsers() {
 	superadminPass := mustGetSeedPassword("SEED_SUPERADMIN_PASSWORD")
 	superadminHash, _ := bcrypt.GenerateFromPassword([]byte(superadminPass), bcrypt.DefaultCost)
 
-	log.Printf("🌱 Seeding users with password hash...")
+	log.Printf("🌱 Seeding users (only if they don't exist)...")
 
-	// Create superadmin first
+	// Create superadmin first — DO NOTHING if already exists so password isn't overwritten
 	_, err := db.Exec(`
 		INSERT INTO users (name, email, password_hash, role, active) VALUES
 		('Super Admin', 'superadmin@logitrack.com', $1, 'superadmin', true)
-		ON CONFLICT (email) DO UPDATE SET
-			password_hash = EXCLUDED.password_hash,
-			role = EXCLUDED.role,
-			active = true
+		ON CONFLICT (email) DO NOTHING
 	`, superadminHash)
 	if err != nil {
 		log.Println("⚠️ Failed to seed superadmin:", err)
@@ -95,7 +92,7 @@ func seedUsers() {
 		log.Println("✅ Superadmin checked/created: superadmin@logitrack.com")
 	}
 
-	// Seed other users
+	// Seed other users — DO NOTHING if already exist to preserve passwords
 	_, err = db.Exec(`
 		INSERT INTO users (name, email, password_hash, role, active) VALUES
 		('Admin User', 'admin@logitrack.com', $1, 'admin', true),
@@ -104,9 +101,7 @@ func seedUsers() {
 		('Coordinator', 'coordinator@logitrack.com', $1, 'coordinator', true),
 		('Analyst', 'analyst@logitrack.com', $1, 'analyst', true),
 		('Driver', 'driver@logitrack.com', $1, 'driver', true)
-		ON CONFLICT (email) DO UPDATE SET
-			password_hash = EXCLUDED.password_hash,
-			role = EXCLUDED.role
+		ON CONFLICT (email) DO NOTHING
 	`, passwordHash)
 	if err != nil {
 		log.Println("⚠️ Failed to seed users:", err)
